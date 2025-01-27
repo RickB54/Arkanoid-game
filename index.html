@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Web Arkanoid</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body {
             margin: 0;
@@ -11,126 +12,982 @@
             min-height: 100vh;
             background: #1a1a1a;
             font-family: Arial, sans-serif;
-        }
-        canvas {
-            border: 2px solid #333;
+            touch-action: none;
+            overflow: hidden;
         }
         #gameContainer {
             position: relative;
+            width: 100%;
+            max-width: 800px;
+            touch-action: none;
         }
-        #score {
+        canvas {
+            border: 2px solid #333;
+            width: 100%;
+            height: auto;
+            touch-action: none;
+        }
+        .hud {
             position: absolute;
-            top: 10px;
-            left: 10px;
             color: white;
             font-size: 20px;
+            text-shadow: 2px 2px 2px rgba(0,0,0,0.5);
         }
-        #lives {
+        #score { top: 10px; left: 10px; }
+        #lives { top: 10px; right: 10px; }
+        #level { top: 10px; left: 50%; transform: translateX(-50%); }
+        #pauseButton {
+            position: absolute;
+            top: 10px;
+            right: 100px;
+            font-family: Arial, sans-serif;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #pauseButton:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        #settingsButton {
             position: absolute;
             top: 10px;
             right: 10px;
+            font-size: 16px;
+            font-family: Arial, sans-serif;
+            background: #4CAF50;
+            border: none;
             color: white;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 8px 16px;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        }
+
+        #settingsButton:hover {
+            background: #45a049;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            opacity: 0.7;
+        }
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: particle 0.5s ease-out forwards;
+        }
+        @keyframes particle {
+            0% { transform: translate(0, 0); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)); opacity: 0; }
+        }
+        @media (max-width: 600px) {
+            #instructions { font-size: 14px; bottom: 10px; }
+            .hud { font-size: 16px; }
+        }
+        #gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            display: none;
+        }
+        #gameOverScreen button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .menu-button {
+            font-family: Arial, sans-serif;
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            width: 100%;
+            font-size: 16px;
+            margin: 8px 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .menu-button:hover {
+            background: #45a049;
+        }
+
+        #settingsMenu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            display: none;
+            z-index: 1001;
+            min-width: 300px;
+        }
+
+        #rulesContent {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .level-select {
+            background: #4CAF50;
+            color: white;
+            padding: 5px;
+            border: none;
+            border-radius: 4px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        #rulesModal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #4CAF50;
+            color: white;
+            z-index: 1000;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        #rulesModal ul {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+
+        #rulesModal li {
+            margin: 12px 0;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+            padding: 0;
+        }
+
+        #rulesModal li:before {
+            display: none;  /* Remove any pseudo-elements */
+        }
+
+        #rulesModal .power-up-example {
+            display: inline-flex;
+            width: 24px;
+            height: 24px;
+            border: 1px solid white;
+            border-radius: 4px;
+            margin-right: 12px;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        #rulesModal .close-btn, #rulesModal .back-btn {
+            background: none;
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        #rulesModal .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        #rulesModal .close-btn:hover {
+            color: #4CAF50;
+        }
+
+        #rulesModal .close-btn {
+            background: none;
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+            width: 32px;
+            height: 32px;
+            border-radius: 5px;
+            cursor: pointer;
             font-size: 20px;
+            transition: all 0.3s ease;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #rulesModal .close-btn:before {
+            content: none;
+        }
+
+        #rulesModal .back-btn:before {
+            display: none;
+        }
+
+        #rulesModal .back-btn {
+            background: none;
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #rulesModal h2 {
+            color: #4CAF50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #rulesModal h3 {
+            color: #2196F3;
+            margin-top: 15px;
+        }
+
+        #rulesModal ul {
+            list-style-type: none;
+            padding-left: 0;
+            margin: 15px 0;
+        }
+
+        #rulesModal li {
+            margin: 12px 0;
+            padding-left: 25px;
+            position: relative;
+            line-height: 1.4;
+        }
+
+        #rulesModal li:before {
+            content: "";  
+            color: #2196F3;  
+            position: absolute;
+            left: 5px;
+            font-size: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        #rulesModal .power-up-example {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid white;
+            vertical-align: middle;
+            margin-right: 10px;
+            border-radius: 4px;  
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);  
+        }
+
+        #rulesModal .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        #rulesModal .close-btn:hover {
+            color: #4CAF50;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
         }
     </style>
 </head>
 <body>
     <div id="gameContainer">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <div id="score">Score: 0</div>
-        <div id="lives">Lives: 3</div>
+        <audio id="paddleHitSound" src="sounds/paddle-hit.mp3" preload="auto"></audio>
+        <audio id="blockBreakSound" src="sounds/block-break.mp3" preload="auto"></audio>
+        <audio id="lifeGainSound" src="sounds/life-gain.mp3" preload="auto"></audio>
+        <audio id="lifeLossSound" src="sounds/life-loss.mp3" preload="auto"></audio>
+        <div id="score" class="hud">Score: 0</div>
+        <div id="lives" class="hud">Lives: 3</div>
+        <div id="level" class="hud">Level: 1</div>
+        <button id="pauseButton">Pause</button>
+        <button id="settingsButton">Settings</button>
+        <div id="instructions">
+            Desktop: Use ← → arrow keys<br>
+            Mobile: Tap sides, swipe, or drag paddle
+        </div>
+        <div id="gameOverScreen">
+            <h2 id="gameOverTitle">Game Over</h2>
+            <p id="gameOverScore">Score: 0</p>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+        <div id="settingsMenu" class="menu">
+            <h2>Settings</h2>
+            <button class="menu-button" onclick="showRules()">Rules of the Game</button>
+            <select id="levelSelect" class="level-select">
+                <option value="">Skip to Level...</option>
+                <option value="1">Level 1</option>
+                <option value="2">Level 2</option>
+                <option value="3">Level 3</option>
+                <option value="4">Level 4</option>
+                <option value="5">Level 5</option>
+                <option value="6">Level 6</option>
+                <option value="7">Level 7</option>
+                <option value="8">Level 8</option>
+            </select>
+            <button class="menu-button" onclick="endGame()">End Game</button>
+            <button class="menu-button" onclick="closeSettings()">Close</button>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div id="rulesModal">
+        <button class="back-btn" onclick="backToSettings()">Back</button>
+        <button class="close-btn" onclick="closeRules()">X</button>
+        <h2>Arkanoid Game Rules</h2>
+        
+        <h3>Basic Gameplay</h3>
+        <ul>
+            <li>Move the paddle left and right to bounce the ball</li>
+            <li>Break all blocks to complete each level</li>
+            <li>Don't let the ball fall below the paddle</li>
+            <li>You start with 3 lives</li>
+            <li>Higher levels increase ball speed by 20% each time</li>
+        </ul>
+
+        <h3>Block Types</h3>
+        <ul>
+            <li><span class="power-up-example" style="background: #4CAF50;"></span>Green blocks: Single-hit blocks</li>
+            <li><span class="power-up-example" style="background: #FFA500;"></span>Orange blocks: Double-hit blocks</li>
+            <li><span class="power-up-example" style="background: #FF4136;"></span>Red blocks: Triple-hit blocks</li>
+            <li><span class="power-up-example" style="background: #FF0000;"></span>Skull blocks: Dangerous life-draining blocks</li>
+        </ul>
+
+        <h3>Power-ups</h3>
+        <ul>
+            <li><span class="power-up-example" style="background: #4169E1;"></span>Blue plus: Increases paddle size by 50%</li>
+            <li><span class="power-up-example" style="background: #FF4136;"></span>Red minus: Decreases paddle size by 30%</li>
+            <li><span class="power-up-example" style="background: #4CAF50;"></span>Green heart: Gain an extra life</li>
+            <li><span class="power-up-example" style="background: #FF0000;"></span>Red skull: Lose one life - watch out!</li>
+        </ul>
+
+        <h3>Scoring System</h3>
+        <ul>
+            <li>Green blocks: 10 points</li>
+            <li>Orange blocks: 20 points</li>
+            <li>Red blocks: 30 points</li>
+            <li>Complete a level: Bonus points!</li>
+        </ul>
+
+        <h3>Game Controls</h3>
+        <ul>
+            <li>Left Arrow or A: Move paddle left</li>
+            <li>Right Arrow or D: Move paddle right</li>
+            <li>P or ESC: Pause game</li>
+            <li>Space: Launch ball / Start game</li>
+        </ul>
+
+        <h3>Pro Tips</h3>
+        <ul>
+            <li>Hit the ball with paddle edges for angle shots</li>
+            <li>Avoid the red skull blocks when possible</li>
+            <li>Extra lives appear more often after level 5</li>
+            <li>Paddle speed increases to match faster levels</li>
+        </ul>
     </div>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('score');
         const livesElement = document.getElementById('lives');
-
-        // Game constants
-        const PADDLE_WIDTH = 100;
-        const PADDLE_HEIGHT = 20;
-        const BALL_SIZE = 10;
-        const BLOCK_WIDTH = 80;
-        const BLOCK_HEIGHT = 30;
-        const BLOCK_ROWS = 5;
-        const BLOCK_COLS = 8;
-
-        // Colors
-        const COLORS = [
-            '#ff0000',  // Red
-            '#00ff00',  // Green
-            '#0000ff',  // Blue
-            '#ffff00',  // Yellow
-            '#ff00ff'   // Magenta
-        ];
+        const levelElement = document.getElementById('level');
+        const pauseButton = document.getElementById('pauseButton');
 
         // Game state
+        let gameState = {
+            level: 1,
+            score: 0,
+            lives: 3,
+            paused: false,
+            gameStarted: false,
+            gameOver: false
+        };
+
+        // Game constants
+        const PADDLE_HEIGHT = 10;
+        const BALL_SIZE = 6;
+        const BLOCK_WIDTH = 60;
+        const BLOCK_HEIGHT = 15;
+
+        // Level configurations with more challenging patterns
+        const LEVELS = [
+            {
+                pattern: [  // Level 1: Basic with gaps
+                    [1,1,0,1,1,0,1,1],
+                    [1,0,1,1,1,1,0,1],
+                    [1,1,1,0,0,1,1,1]
+                ],
+                ballSpeed: 3,      // Base speed
+                paddleWidth: 100
+            },
+            {
+                pattern: [  // Level 2: Zigzag path
+                    [1,2,0,0,0,0,2,1],
+                    [0,1,2,0,0,2,1,0],
+                    [0,0,1,2,2,1,0,0],
+                    [0,1,2,0,0,2,1,0],
+                    [1,2,0,0,0,0,2,1]
+                ],
+                ballSpeed: 3.6,    // +20%
+                paddleWidth: 95
+            },
+            {
+                pattern: [  // Level 3: Tunnel challenge
+                    [2,2,2,0,0,2,2,2],
+                    [2,0,0,0,0,0,0,2],
+                    [2,0,1,1,1,1,0,2],
+                    [2,0,0,0,0,0,0,2],
+                    [2,2,2,0,0,2,2,2]
+                ],
+                ballSpeed: 4.32,   // +20%
+                paddleWidth: 90
+            },
+            {
+                pattern: [  // Level 4: Scattered fortress
+                    [3,0,2,3,3,2,0,3],
+                    [0,2,0,3,3,0,2,0],
+                    [2,0,2,0,0,2,0,2],
+                    [3,3,0,0,0,0,3,3],
+                    [0,2,0,3,3,0,2,0]
+                ],
+                ballSpeed: 5.18,   // +20%
+                paddleWidth: 85
+            },
+            {
+                pattern: [  // Level 5: Maze with tough blocks
+                    [3,3,3,0,0,3,3,3],
+                    [0,0,3,3,3,3,0,0],
+                    [3,0,2,0,0,2,0,3],
+                    [3,3,0,0,0,0,3,3],
+                    [0,3,2,3,3,2,3,0],
+                    [3,0,3,3,3,3,0,3]
+                ],
+                ballSpeed: 6.22,   // +20%
+                paddleWidth: 85
+            },
+            {
+                pattern: [  // Level 6: Sniper's challenge
+                    [0,3,0,3,3,0,3,0],
+                    [3,0,2,0,0,2,0,3],
+                    [0,2,0,3,3,0,2,0],
+                    [3,0,3,0,0,3,0,3],
+                    [0,2,0,3,3,0,2,0]
+                ],
+                ballSpeed: 7.46,   // +20%
+                paddleWidth: 80
+            },
+            {
+                pattern: [  // Level 7: Gauntlet
+                    [3,0,3,0,0,3,0,3],
+                    [0,2,0,3,3,0,2,0],
+                    [3,0,0,2,2,0,0,3],
+                    [0,3,2,0,0,2,3,0],
+                    [3,0,3,2,2,3,0,3],
+                    [0,2,0,3,3,0,2,0]
+                ],
+                ballSpeed: 8.95,   // +20%
+                paddleWidth: 80
+            },
+            {
+                pattern: [  // Level 8: Ultimate Challenge
+                    [3,0,3,2,2,3,0,3],
+                    [0,3,0,3,3,0,3,0],
+                    [2,0,3,0,0,3,0,2],
+                    [3,2,0,3,3,0,2,3],
+                    [0,3,2,0,0,2,3,0],
+                    [3,0,3,2,2,3,0,3]
+                ],
+                ballSpeed: 10.74,  // +20%
+                paddleWidth: 75
+            }
+        ];
+
+        // Colors with gradients
+        const COLORS = [
+            ['#ff0000', '#ff6666'],  // Red
+            ['#00ff00', '#66ff66'],  // Green
+            ['#0000ff', '#6666ff'],  // Blue
+            ['#ffff00', '#ffff66'],  // Yellow
+            ['#ff00ff', '#ff66ff']   // Magenta
+        ];
+
+        // Game objects
         let paddle = {
-            x: canvas.width / 2 - PADDLE_WIDTH / 2,
-            y: canvas.height - 40,
-            width: PADDLE_WIDTH,
+            x: canvas.width / 2,
+            y: canvas.height - 30,
+            width: LEVELS[0].paddleWidth,
             height: PADDLE_HEIGHT,
-            speed: 8
+            speed: 6
         };
 
         let ball = {
             x: canvas.width / 2,
-            y: canvas.height - 60,
+            y: canvas.height - 40,
             size: BALL_SIZE,
-            speedX: 4,
-            speedY: -4
+            speedX: LEVELS[0].ballSpeed,
+            speedY: -LEVELS[0].ballSpeed
         };
 
         let blocks = [];
-        let score = 0;
-        let lives = 3;
-        let rightPressed = false;
-        let leftPressed = false;
+        let particles = [];
+        let touchX = null;
+        let isDragging = false;
 
-        // Create blocks
-        function createBlocks() {
-            blocks = [];
-            for (let row = 0; row < BLOCK_ROWS; row++) {
-                for (let col = 0; col < BLOCK_COLS; col++) {
-                    blocks.push({
-                        x: col * (BLOCK_WIDTH + 2) + 45,
-                        y: row * (BLOCK_HEIGHT + 2) + 50,
-                        width: BLOCK_WIDTH,
-                        height: BLOCK_HEIGHT,
-                        color: COLORS[row % COLORS.length]
-                    });
+        // Power-up system
+        let powerUps = [];
+        const POWERUP_SPEED = 2;
+        const POWERUP_SIZE = 15;
+        const POWERUP_CHANCE = 0.2;  // 20% chance for power-up on block break
+        const EXTRA_LIFE_CHANCE = 0.15;  // 15% chance for extra life in higher levels
+        const DRAIN_LIFE_BLOCKS = 1;  // One life-draining block per level (from level 2)
+
+        function createPowerUp(x, y, forcedType = null) {
+            if (forcedType || Math.random() < POWERUP_CHANCE) {
+                let type;
+                if (forcedType) {
+                    type = forcedType;
+                } else {
+                    // In higher levels (5+), chance for extra life
+                    if (gameState.level >= 5 && Math.random() < EXTRA_LIFE_CHANCE) {
+                        type = 'extraLife';
+                    } else {
+                        type = Math.random() < 0.5 ? 'shrink' : 'expand';
+                    }
+                }
+                powerUps.push({
+                    x: x,
+                    y: y,
+                    type: type,
+                    width: POWERUP_SIZE,
+                    height: POWERUP_SIZE,
+                    speed: POWERUP_SPEED
+                });
+            }
+        }
+
+        function updatePowerUps() {
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                const powerUp = powerUps[i];
+                powerUp.y += powerUp.speed;
+
+                // Check for paddle collision
+                if (powerUp.y + powerUp.height >= paddle.y &&
+                    powerUp.y <= paddle.y + paddle.height &&
+                    powerUp.x + powerUp.width >= paddle.x - paddle.width/2 &&
+                    powerUp.x <= paddle.x + paddle.width/2) {
+                    
+                    // Apply power-up effect
+                    switch(powerUp.type) {
+                        case 'expand':
+                            paddle.width = Math.min(paddle.width * 1.5, canvas.width/2);
+                            break;
+                        case 'shrink':
+                            paddle.width = Math.max(paddle.width * 0.7, 40);
+                            break;
+                        case 'extraLife':
+                            gameState.lives++;
+                            livesElement.textContent = `Lives: ${gameState.lives}`;
+                            // Visual feedback for extra life
+                            livesElement.style.color = '#4CAF50';
+                            setTimeout(() => livesElement.style.color = '', 500);
+                            break;
+                        case 'drainLife':
+                            if (gameState.lives > 1) {  // Don't drain last life
+                                gameState.lives--;
+                                livesElement.textContent = `Lives: ${gameState.lives}`;
+                                // Visual feedback for life loss
+                                livesElement.style.color = '#FF4136';
+                                setTimeout(() => livesElement.style.color = '', 500);
+                            }
+                            break;
+                    }
+
+                    // Remove collected power-up
+                    powerUps.splice(i, 1);
+                }
+                // Remove power-ups that fall off screen
+                else if (powerUp.y > canvas.height) {
+                    powerUps.splice(i, 1);
                 }
             }
         }
 
-        // Reset ball
-        function resetBall() {
-            ball.x = canvas.width / 2;
-            ball.y = canvas.height - 60;
-            ball.speedX = Math.random() > 0.5 ? 4 : -4;
-            ball.speedY = -4;
+        function drawPowerUps() {
+            powerUps.forEach(powerUp => {
+                ctx.beginPath();
+                switch(powerUp.type) {
+                    case 'expand':
+                        ctx.fillStyle = '#4169E1';  // Royal Blue
+                        // Draw plus symbol
+                        ctx.fillRect(powerUp.x + 2, powerUp.y + powerUp.height/2 - 2, powerUp.width - 4, 4);
+                        ctx.fillRect(powerUp.x + powerUp.width/2 - 2, powerUp.y + 2, 4, powerUp.height - 4);
+                        break;
+                    case 'shrink':
+                        ctx.fillStyle = '#FF4136';  // Red
+                        // Draw minus symbol
+                        ctx.fillRect(powerUp.x + 2, powerUp.y + powerUp.height/2 - 2, powerUp.width - 4, 4);
+                        break;
+                    case 'extraLife':
+                        ctx.fillStyle = '#4CAF50';  // Green
+                        // Draw heart symbol
+                        const centerX = powerUp.x + powerUp.width/2;
+                        const centerY = powerUp.y + powerUp.height/2;
+                        ctx.moveTo(centerX, centerY + 4);
+                        ctx.arc(centerX - 2, centerY, 2, 0, Math.PI, true);
+                        ctx.arc(centerX + 2, centerY, 2, 0, Math.PI, true);
+                        ctx.lineTo(centerX, centerY + 4);
+                        break;
+                    case 'drainLife':
+                        ctx.fillStyle = '#FF0000';  // Bright Red
+                        // Draw skull symbol (simplified)
+                        ctx.arc(powerUp.x + powerUp.width/2, powerUp.y + powerUp.height/2, 5, 0, Math.PI * 2);
+                        ctx.fillRect(powerUp.x + 5, powerUp.y + powerUp.height - 6, powerUp.width - 10, 3);
+                        break;
+                }
+                ctx.strokeStyle = 'white';
+                ctx.strokeRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+                ctx.fill();
+                ctx.stroke();
+            });
         }
 
-        // Handle keyboard input
+        // Modified block creation to include life-draining blocks
+        function createBlocks() {
+            blocks = [];
+            const level = LEVELS[gameState.level - 1];
+            const pattern = level.pattern;
+            
+            const blockWidth = canvas.width / 8;
+            const blockHeight = 20;
+            
+            // Add regular blocks
+            for (let row = 0; row < pattern.length; row++) {
+                for (let col = 0; col < pattern[row].length; col++) {
+                    if (pattern[row][col] > 0) {
+                        const block = {
+                            x: col * blockWidth + 1,
+                            y: row * blockHeight + 50,
+                            width: blockWidth - 2,
+                            height: blockHeight - 2,
+                            hits: pattern[row][col],
+                            maxHits: pattern[row][col],
+                            isDrainLife: false
+                        };
+                        blocks.push(block);
+                    }
+                }
+            }
+
+            // Add life-draining blocks from level 2 onwards
+            if (gameState.level >= 2 && blocks.length > 0) {
+                for (let i = 0; i < DRAIN_LIFE_BLOCKS; i++) {
+                    const randomBlock = blocks[Math.floor(Math.random() * blocks.length)];
+                    randomBlock.isDrainLife = true;
+                    // Make drain life blocks visually distinct
+                    randomBlock.hits = 1;  // Always one hit
+                    randomBlock.maxHits = 1;
+                }
+            }
+        }
+
+        // Modified block collision to handle life-draining blocks
+        function handleBlockCollision(block, index) {
+            block.hits--;
+            if (block.hits <= 0) {
+                blocks.splice(index, 1);
+                gameState.score += 10 * block.maxHits;
+                scoreElement.textContent = `Score: ${gameState.score}`;
+                
+                // Create particles at block position
+                createParticles(block.x + block.width/2, block.y + block.height/2);
+                
+                // Create power-up
+                if (block.isDrainLife) {
+                    createPowerUp(block.x + block.width/2, block.y + block.height/2, 'drainLife');
+                } else {
+                    createPowerUp(block.x + block.width/2, block.y + block.height/2);
+                }
+            }
+        }
+
+        // Modified block drawing to show life-draining blocks
+        function drawBlocks() {
+            blocks.forEach(block => {
+                if (block.isDrainLife) {
+                    ctx.fillStyle = '#FF0000';  // Bright red for life-draining blocks
+                } else {
+                    const hitRatio = block.hits / block.maxHits;
+                    if (hitRatio === 1) ctx.fillStyle = '#4CAF50';  // Green
+                    else if (hitRatio >= 0.6) ctx.fillStyle = '#FFA500';  // Orange
+                    else ctx.fillStyle = '#FF4136';  // Red
+                }
+                ctx.fillRect(block.x, block.y, block.width, block.height);
+                
+                // Add skull symbol to life-draining blocks
+                if (block.isDrainLife) {
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    const centerX = block.x + block.width/2;
+                    const centerY = block.y + block.height/2;
+                    ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+                    ctx.fillRect(centerX - 4, centerY + 2, 8, 2);
+                    ctx.fill();
+                }
+                
+                // Highlight effect
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fillRect(block.x, block.y, block.width, block.height / 3);
+            });
+        }
+
+        // Create particle effect
+        function createParticles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    speedX: (Math.random() - 0.5) * 4,
+                    speedY: (Math.random() - 0.5) * 4,
+                    radius: Math.random() * 3 + 1,
+                    life: 1
+                });
+            }
+        }
+
+        // Update particles
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const particle = particles[i];
+                particle.x += particle.speedX;
+                particle.y += particle.speedY;
+                particle.life -= 0.02;
+                
+                if (particle.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        // Draw particles
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.beginPath();
+                ctx.fillStyle = `rgba(255, 255, 255, ${particle.life})`;
+                ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Input state
+        let keys = {
+            left: false,
+            right: false
+        };
+
+        // Maintain aspect ratio
+        function resizeCanvas() {
+            const container = document.getElementById('gameContainer');
+            const containerWidth = container.clientWidth;
+            const aspectRatio = canvas.height / canvas.width;
+            canvas.style.width = containerWidth + 'px';
+            canvas.style.height = (containerWidth * aspectRatio) + 'px';
+        }
+
+        // Reset ball
+        function resetBall() {
+            const level = LEVELS[gameState.level - 1];
+            ball.x = paddle.x;  // Start ball above paddle
+            ball.y = paddle.y - ball.size;
+            // More varied initial angles
+            ball.speedX = (Math.random() * 1.4 - 0.7) * level.ballSpeed;
+            ball.speedY = -level.ballSpeed;
+        }
+
+        // Keyboard controls
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Right' || e.key === 'ArrowRight') rightPressed = true;
-            if (e.key === 'Left' || e.key === 'ArrowLeft') leftPressed = true;
+            if (gameState.gameOver) return;
+            
+            if (e.key === 'Right' || e.key === 'ArrowRight') {
+                keys.right = true;
+            }
+            if (e.key === 'Left' || e.key === 'ArrowLeft') {
+                keys.left = true;
+            }
+            if (e.key === 'p' || e.key === 'P') togglePause();
         });
 
         document.addEventListener('keyup', (e) => {
-            if (e.key === 'Right' || e.key === 'ArrowRight') rightPressed = false;
-            if (e.key === 'Left' || e.key === 'ArrowLeft') leftPressed = false;
+            if (e.key === 'Right' || e.key === 'ArrowRight') {
+                keys.right = false;
+            }
+            if (e.key === 'Left' || e.key === 'ArrowLeft') {
+                keys.left = false;
+            }
         });
+
+        // Touch controls
+        function handleTouchStart(e) {
+            e.preventDefault();
+            if (gameState.gameOver) return;
+            
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const touchX = (touch.clientX - rect.left) * scaleX;
+            
+            // Immediate paddle movement
+            if (touchX < canvas.width / 2) {
+                keys.left = true;
+                keys.right = false;
+            } else {
+                keys.right = true;
+                keys.left = false;
+            }
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const touchX = (touch.clientX - rect.left) * scaleX;
+            
+            // Update movement based on touch position
+            if (touchX < canvas.width / 2) {
+                keys.left = true;
+                keys.right = false;
+            } else {
+                keys.right = true;
+                keys.left = false;
+            }
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            keys.left = false;
+            keys.right = false;
+        }
+
+        canvas.addEventListener('touchstart', handleTouchStart);
+        canvas.addEventListener('touchmove', handleTouchMove);
+        canvas.addEventListener('touchend', handleTouchEnd);
+
+        // Pause functionality
+        pauseButton.addEventListener('click', togglePause);
+
+        function togglePause() {
+            gameState.paused = !gameState.paused;
+            pauseButton.textContent = gameState.paused ? 'Resume' : 'Pause';
+        }
+
+        // Sound system
+        const sounds = {
+            paddleHit: document.getElementById('paddleHitSound'),
+            blockBreak: document.getElementById('blockBreakSound'),
+            lifeGain: document.getElementById('lifeGainSound'),
+            lifeLoss: document.getElementById('lifeLossSound')
+        };
+
+        function playSound(soundId) {
+            const sound = sounds[soundId];
+            if (sound) {
+                sound.currentTime = 0;  // Reset the sound to start
+                sound.play().catch(e => console.log('Error playing sound:', e));
+            }
+        }
 
         // Update game state
         function update() {
-            // Move paddle
-            if (rightPressed && paddle.x < canvas.width - paddle.width) {
-                paddle.x += paddle.speed;
-            }
-            if (leftPressed && paddle.x > 0) {
+            if (gameState.paused || gameState.gameOver) return;
+
+            // Move paddle based on input state
+            if (keys.left) {
                 paddle.x -= paddle.speed;
             }
+            if (keys.right) {
+                paddle.x += paddle.speed;
+            }
+            
+            // Keep paddle within bounds
+            paddle.x = Math.max(paddle.width/2, Math.min(canvas.width - paddle.width/2, paddle.x));
+
+            // Update power-ups
+            updatePowerUps();
+
+            // Update particles
+            updateParticles();
 
             // Move ball
             ball.x += ball.speedX;
@@ -146,12 +1003,12 @@
 
             // Paddle collision
             if (ball.y + ball.size >= paddle.y &&
-                ball.x >= paddle.x &&
-                ball.x <= paddle.x + paddle.width) {
+                ball.x >= paddle.x - paddle.width/2 &&
+                ball.x <= paddle.x + paddle.width/2) {
                 ball.speedY = -Math.abs(ball.speedY);
-                // Adjust x speed based on where ball hits paddle
-                let hitPos = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                let hitPos = (ball.x - paddle.x) / (paddle.width/2);
                 ball.speedX = hitPos * 8;
+                playSound('paddleHit');
             }
 
             // Block collisions
@@ -160,51 +1017,82 @@
                     ball.x <= block.x + block.width &&
                     ball.y + ball.size >= block.y &&
                     ball.y <= block.y + block.height) {
+                    
                     ball.speedY *= -1;
-                    blocks.splice(index, 1);
-                    score += 10;
-                    scoreElement.textContent = `Score: ${score}`;
+                    handleBlockCollision(block, index);
+                    playSound('blockBreak');
                 }
             });
 
-            // Ball falls below paddle
-            if (ball.y > canvas.height) {
-                lives--;
-                livesElement.textContent = `Lives: ${lives}`;
-                if (lives > 0) {
+            // Level complete
+            if (blocks.length === 0) {
+                if (gameState.level < LEVELS.length) {
+                    gameState.level++;
+                    levelElement.textContent = `Level: ${gameState.level}`;
+                    const level = LEVELS[gameState.level - 1];
+                    paddle.width = level.paddleWidth;
+                    ball.speedX = level.ballSpeed * (ball.speedX > 0 ? 1 : -1);
+                    ball.speedY = -level.ballSpeed;
+                    createBlocks();
                     resetBall();
                 } else {
-                    alert('Game Over! Your score: ' + score);
-                    document.location.reload();
+                    showGameOver('Congratulations! You Won!');
                 }
             }
 
-            // Win condition
-            if (blocks.length === 0) {
-                alert('Congratulations! You won! Score: ' + score);
-                document.location.reload();
+            // Ball falls below paddle
+            if (ball.y > canvas.height) {
+                gameState.lives--;
+                livesElement.textContent = `Lives: ${gameState.lives}`;
+                if (gameState.lives > 0) {
+                    resetBall();
+                } else {
+                    showGameOver('Game Over');
+                }
             }
         }
 
         // Draw game objects
         function draw() {
-            // Clear canvas
-            ctx.fillStyle = '#000000';
+            // Clear canvas with gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#1a1a1a');
+            gradient.addColorStop(1, '#000000');
+            ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw paddle
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+            // Draw particles
+            drawParticles();
 
-            // Draw ball
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(ball.x, ball.y, ball.size, ball.size);
+            // Draw paddle with gradient
+            const paddleGradient = ctx.createLinearGradient(
+                paddle.x - paddle.width/2,
+                paddle.y,
+                paddle.x - paddle.width/2,
+                paddle.y + paddle.height
+            );
+            paddleGradient.addColorStop(0, '#ffffff');
+            paddleGradient.addColorStop(1, '#999999');
+            ctx.fillStyle = paddleGradient;
+            ctx.fillRect(paddle.x - paddle.width/2, paddle.y, paddle.width, paddle.height);
 
-            // Draw blocks
-            blocks.forEach(block => {
-                ctx.fillStyle = block.color;
-                ctx.fillRect(block.x, block.y, block.width, block.height);
-            });
+            // Draw ball with gradient
+            const ballGradient = ctx.createRadialGradient(
+                ball.x, ball.y, 0,
+                ball.x, ball.y, ball.size
+            );
+            ballGradient.addColorStop(0, '#ffffff');
+            ballGradient.addColorStop(1, '#cccccc');
+            ctx.fillStyle = ballGradient;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw blocks with gradients
+            drawBlocks();
+
+            // Draw power-ups
+            drawPowerUps();
         }
 
         // Game loop
@@ -214,7 +1102,148 @@
             requestAnimationFrame(gameLoop);
         }
 
+        function showGameOver(message) {
+            const gameOverScreen = document.getElementById('gameOverScreen');
+            const gameOverTitle = document.getElementById('gameOverTitle');
+            const gameOverScore = document.getElementById('gameOverScore');
+            
+            gameOverTitle.textContent = message;
+            gameOverScore.textContent = `Final Score: ${gameState.score}`;
+            gameOverScreen.style.display = 'block';
+            gameState.gameOver = true;
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            gameState = {
+                level: 1,
+                score: 0,
+                lives: 3,
+                paused: false,
+                gameStarted: true,
+                gameOver: false
+            };
+            levelElement.textContent = `Level: ${gameState.level}`;
+            scoreElement.textContent = `Score: ${gameState.score}`;
+            livesElement.textContent = `Lives: ${gameState.lives}`;
+            paddle.width = LEVELS[0].paddleWidth;
+            createBlocks();
+            resetBall();
+            powerUps = [];  // Clear any existing power-ups
+        }
+
+        // Settings functionality
+        const settingsButton = document.getElementById('settingsButton');
+        const settingsMenu = document.getElementById('settingsMenu');
+        const rulesContent = document.getElementById('rulesContent');
+        const levelSelect = document.getElementById('levelSelect');
+
+        // Populate level select
+        for (let i = 1; i <= LEVELS.length; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `Level ${i}`;
+            levelSelect.appendChild(option);
+        }
+
+        settingsButton.addEventListener('click', () => {
+            const isVisible = settingsMenu.style.display === 'block';
+            settingsMenu.style.display = isVisible ? 'none' : 'block';
+            document.getElementById('modalOverlay').style.display = isVisible ? 'none' : 'block';
+            document.getElementById('rulesModal').style.display = 'none';  // Always hide rules
+            gameState.paused = !isVisible;
+            pauseButton.textContent = isVisible ? 'Pause' : 'Resume';
+        });
+
+        function closeSettings() {
+            settingsMenu.style.display = 'none';
+            document.getElementById('modalOverlay').style.display = 'none';
+            if (!document.getElementById('rulesModal').style.display === 'block') {
+                gameState.paused = false;
+                pauseButton.textContent = 'Pause';
+            }
+        }
+
+        function toggleRules() {
+            rulesContent.style.display = rulesContent.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function skipToLevel(level) {
+            if (!level) return;
+            gameState.level = parseInt(level);
+            levelElement.textContent = `Level: ${gameState.level}`;
+            const currentLevel = LEVELS[gameState.level - 1];
+            paddle.width = currentLevel.paddleWidth;
+            ball.speedX = currentLevel.ballSpeed * (ball.speedX > 0 ? 1 : -1);
+            ball.speedY = -currentLevel.ballSpeed;
+            createBlocks();
+            resetBall();
+            powerUps = [];  // Clear any existing power-ups
+            settingsMenu.style.display = 'none';
+            gameState.paused = false;
+            pauseButton.textContent = 'Pause';
+            levelSelect.value = '';
+        }
+
+        function endGame() {
+            showGameOver('Game Ended');
+            settingsMenu.style.display = 'none';
+        }
+
+        function showRules() {
+            settingsMenu.style.display = 'none';  // Hide settings menu
+            document.getElementById('rulesModal').style.display = 'block';
+            document.getElementById('modalOverlay').style.display = 'block';
+            gameState.paused = true;
+            pauseButton.textContent = 'Resume';
+        }
+
+        function closeRules() {
+            document.getElementById('rulesModal').style.display = 'none';
+            document.getElementById('modalOverlay').style.display = 'none';
+            gameState.paused = false;
+            pauseButton.textContent = 'Pause';
+        }
+
+        function backToSettings() {
+            document.getElementById('rulesModal').style.display = 'none';
+            settingsMenu.style.display = 'block';
+        }
+
+        // Close modals when clicking overlay
+        document.getElementById('modalOverlay').addEventListener('click', () => {
+            closeRules();
+            settingsMenu.style.display = 'none';
+        });
+
+        // Add mute button
+        const muteButton = document.createElement('button');
+        muteButton.textContent = '';
+        muteButton.style.position = 'absolute';
+        muteButton.style.top = '10px';
+        muteButton.style.left = '10px';
+        muteButton.style.zIndex = '1000';
+        muteButton.style.background = 'none';
+        muteButton.style.border = '2px solid #4CAF50';
+        muteButton.style.color = '#4CAF50';
+        muteButton.style.padding = '8px';
+        muteButton.style.borderRadius = '5px';
+        muteButton.style.cursor = 'pointer';
+        muteButton.style.transition = 'all 0.3s ease';
+
+        let muted = false;
+        muteButton.onclick = () => {
+            muted = !muted;
+            muteButton.textContent = muted ? '' : '';
+            Object.values(sounds).forEach(sound => {
+                sound.muted = muted;
+            });
+        };
+        document.getElementById('gameContainer').appendChild(muteButton);
+
         // Start game
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
         createBlocks();
         gameLoop();
     </script>

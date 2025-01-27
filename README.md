@@ -1,40 +1,35 @@
-# Arkanoid Game
+# Arkanoid Web Game
 
-A classic Arkanoid-style brick breaker game implemented in Python using Pygame.
+A classic Arkanoid-style brick breaker game implemented as a web application using HTML5 Canvas and JavaScript.
 
 ## Features
-- Paddle movement using left and right arrow keys
-- Ball physics with paddle and block collisions
+- Responsive web design
+- Touch and keyboard controls
 - Multiple lives system
 - Scoring system
-- Colorful blocks
-- Smooth gameplay at 60 FPS
-
-## Requirements
-- Python 3.x
-- Pygame 2.5.2
-
-## Installation
-1. Install the required dependencies:
-```
-pip install -r requirements.txt
-```
+- Power-ups and special blocks
+- Sound effects
+- Pause and restart functionality
 
 ## How to Play
-1. Run the game:
-```
-python arkanoid.py
-```
+- Use LEFT and RIGHT arrow keys or touch/swipe to move the paddle
+- Break all blocks to advance to the next level
+- Avoid losing all lives
+- Collect power-ups for special abilities
 
-2. Controls:
-- Left Arrow: Move paddle left
-- Right Arrow: Move paddle right
-- Close window to quit
+## Deployment
+This game is deployed on GitHub Pages and can be played directly in a web browser.
 
-## Game Rules
-- Break all blocks to win
-- You have 3 lives
-- Missing the ball with your paddle costs one life
-- Each block broken gives you 10 points
-- Game ends when you break all blocks or lose all lives
-"# Arkanoid-game" 
+## Local Development
+1. Clone the repository
+2. Open `index.html` in a modern web browser
+3. No additional dependencies required
+
+## Technologies
+- HTML5 Canvas
+- JavaScript
+- CSS3 for responsive design
+
+## Compatibility
+- Works on desktop and mobile browsers
+- Supports touch and keyboard input
