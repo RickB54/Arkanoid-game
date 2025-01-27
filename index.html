@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Arkanoid</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a1a;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #333;
+        }
+        #gameContainer {
+            position: relative;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+        }
+        #lives {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="score">Score: 0</div>
+        <div id="lives">Lives: 3</div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+
+        // Game constants
+        const PADDLE_WIDTH = 100;
+        const PADDLE_HEIGHT = 20;
+        const BALL_SIZE = 10;
+        const BLOCK_WIDTH = 80;
+        const BLOCK_HEIGHT = 30;
+        const BLOCK_ROWS = 5;
+        const BLOCK_COLS = 8;
+
+        // Colors
+        const COLORS = [
+            '#ff0000',  // Red
+            '#00ff00',  // Green
+            '#0000ff',  // Blue
+            '#ffff00',  // Yellow
+            '#ff00ff'   // Magenta
+        ];
+
+        // Game state
+        let paddle = {
+            x: canvas.width / 2 - PADDLE_WIDTH / 2,
+            y: canvas.height - 40,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            speed: 8
+        };
+
+        let ball = {
+            x: canvas.width / 2,
+            y: canvas.height - 60,
+            size: BALL_SIZE,
+            speedX: 4,
+            speedY: -4
+        };
+
+        let blocks = [];
+        let score = 0;
+        let lives = 3;
+        let rightPressed = false;
+        let leftPressed = false;
+
+        // Create blocks
+        function createBlocks() {
+            blocks = [];
+            for (let row = 0; row < BLOCK_ROWS; row++) {
+                for (let col = 0; col < BLOCK_COLS; col++) {
+                    blocks.push({
+                        x: col * (BLOCK_WIDTH + 2) + 45,
+                        y: row * (BLOCK_HEIGHT + 2) + 50,
+                        width: BLOCK_WIDTH,
+                        height: BLOCK_HEIGHT,
+                        color: COLORS[row % COLORS.length]
+                    });
+                }
+            }
+        }
+
+        // Reset ball
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height - 60;
+            ball.speedX = Math.random() > 0.5 ? 4 : -4;
+            ball.speedY = -4;
+        }
+
+        // Handle keyboard input
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Right' || e.key === 'ArrowRight') rightPressed = true;
+            if (e.key === 'Left' || e.key === 'ArrowLeft') leftPressed = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Right' || e.key === 'ArrowRight') rightPressed = false;
+            if (e.key === 'Left' || e.key === 'ArrowLeft') leftPressed = false;
+        });
+
+        // Update game state
+        function update() {
+            // Move paddle
+            if (rightPressed && paddle.x < canvas.width - paddle.width) {
+                paddle.x += paddle.speed;
+            }
+            if (leftPressed && paddle.x > 0) {
+                paddle.x -= paddle.speed;
+            }
+
+            // Move ball
+            ball.x += ball.speedX;
+            ball.y += ball.speedY;
+
+            // Wall collisions
+            if (ball.x <= 0 || ball.x >= canvas.width - ball.size) {
+                ball.speedX *= -1;
+            }
+            if (ball.y <= 0) {
+                ball.speedY *= -1;
+            }
+
+            // Paddle collision
+            if (ball.y + ball.size >= paddle.y &&
+                ball.x >= paddle.x &&
+                ball.x <= paddle.x + paddle.width) {
+                ball.speedY = -Math.abs(ball.speedY);
+                // Adjust x speed based on where ball hits paddle
+                let hitPos = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                ball.speedX = hitPos * 8;
+            }
+
+            // Block collisions
+            blocks.forEach((block, index) => {
+                if (ball.x + ball.size >= block.x &&
+                    ball.x <= block.x + block.width &&
+                    ball.y + ball.size >= block.y &&
+                    ball.y <= block.y + block.height) {
+                    ball.speedY *= -1;
+                    blocks.splice(index, 1);
+                    score += 10;
+                    scoreElement.textContent = `Score: ${score}`;
+                }
+            });
+
+            // Ball falls below paddle
+            if (ball.y > canvas.height) {
+                lives--;
+                livesElement.textContent = `Lives: ${lives}`;
+                if (lives > 0) {
+                    resetBall();
+                } else {
+                    alert('Game Over! Your score: ' + score);
+                    document.location.reload();
+                }
+            }
+
+            // Win condition
+            if (blocks.length === 0) {
+                alert('Congratulations! You won! Score: ' + score);
+                document.location.reload();
+            }
+        }
+
+        // Draw game objects
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw paddle
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+
+            // Draw ball
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(ball.x, ball.y, ball.size, ball.size);
+
+            // Draw blocks
+            blocks.forEach(block => {
+                ctx.fillStyle = block.color;
+                ctx.fillRect(block.x, block.y, block.width, block.height);
+            });
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        createBlocks();
+        gameLoop();
+    </script>
+</body>
+</html>
