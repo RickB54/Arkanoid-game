@@ -9,67 +9,73 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background: #1a1a1a;
+            height: 100vh;
+            background-color: #000;
             font-family: Arial, sans-serif;
-            touch-action: none;
             overflow: hidden;
+            touch-action: none;  /* Disable browser touch interactions */
         }
+
         #gameContainer {
             position: relative;
             width: 100%;
-            max-width: 800px;
-            touch-action: none;
+            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        canvas {
-            border: 2px solid #333;
-            width: 100%;
-            height: auto;
-            touch-action: none;
+
+        #gameCanvas {
+            max-width: 100%;
+            max-height: 100%;
+            aspect-ratio: 4/3;  /* Standard game aspect ratio */
+            object-fit: contain;
         }
+
+        /* Landscape mode adjustments */
+        @media screen and (orientation: landscape) {
+            body {
+                flex-direction: row;
+            }
+
+            #gameContainer {
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+            }
+
+            #gameCanvas {
+                max-width: 100%;
+                max-height: 100%;
+                width: auto;
+                height: 100%;
+            }
+        }
+
+        /* Ensure HUD elements are visible and scaled */
         .hud {
             position: absolute;
             color: white;
-            font-size: 20px;
-            text-shadow: 2px 2px 2px rgba(0,0,0,0.5);
+            font-size: 16px;
+            z-index: 10;
         }
+
         #score { top: 10px; left: 10px; }
         #lives { top: 10px; right: 10px; }
         #level { top: 10px; left: 50%; transform: translateX(-50%); }
-        #pauseButton {
+        #pauseButton, #settingsButton {
             position: absolute;
-            top: 10px;
-            right: 100px;
-            font-family: Arial, sans-serif;
-            padding: 8px 16px;
+            bottom: 10px;
+            color: white;
             background: rgba(255,255,255,0.2);
             border: none;
-            color: white;
-            cursor: pointer;
-            border-radius: 5px;
+            padding: 10px;
+            z-index: 10;
         }
-        #pauseButton:hover {
-            background: rgba(255,255,255,0.3);
-        }
-        #settingsButton {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 16px;
-            font-family: Arial, sans-serif;
-            background: #4CAF50;
-            border: none;
-            color: white;
-            cursor: pointer;
-            z-index: 1000;
-            padding: 8px 16px;
-            border-radius: 5px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-        }
-
-        #settingsButton:hover {
-            background: #45a049;
-        }
+        #pauseButton { left: 10px; }
+        #settingsButton { right: 10px; }
 
         #instructions {
             position: absolute;
@@ -229,111 +235,6 @@
             cursor: pointer;
             font-size: 16px;
             transition: all 0.3s ease;
-        }
-
-        #rulesModal .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        #rulesModal .close-btn:hover {
-            color: #4CAF50;
-        }
-
-        #rulesModal .close-btn {
-            background: none;
-            border: 2px solid #4CAF50;
-            color: #4CAF50;
-            width: 32px;
-            height: 32px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 20px;
-            transition: all 0.3s ease;
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            font-family: Arial, sans-serif;
-        }
-
-        #rulesModal .close-btn:before {
-            content: none;
-        }
-
-        #rulesModal .back-btn:before {
-            display: none;
-        }
-
-        #rulesModal .back-btn {
-            background: none;
-            border: 2px solid #4CAF50;
-            color: #4CAF50;
-            padding: 8px 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        #rulesModal h2 {
-            color: #4CAF50;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        #rulesModal h3 {
-            color: #2196F3;
-            margin-top: 15px;
-        }
-
-        #rulesModal ul {
-            list-style-type: none;
-            padding-left: 0;
-            margin: 15px 0;
-        }
-
-        #rulesModal li {
-            margin: 12px 0;
-            padding-left: 25px;
-            position: relative;
-            line-height: 1.4;
-        }
-
-        #rulesModal li:before {
-            content: "";  
-            color: #2196F3;  
-            position: absolute;
-            left: 5px;
-            font-size: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        #rulesModal .power-up-example {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 1px solid white;
-            vertical-align: middle;
-            margin-right: 10px;
-            border-radius: 4px;  
-            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);  
         }
 
         #rulesModal .close-btn {
@@ -596,8 +497,10 @@
             x: canvas.width / 2,
             y: canvas.height - 40,
             size: BALL_SIZE,
-            speedX: LEVELS[0].ballSpeed,
-            speedY: -LEVELS[0].ballSpeed
+            speedX: 0,
+            speedY: 0,
+            initialSpeedX: LEVELS[0].ballSpeed * (Math.random() > 0.5 ? 1 : -1),
+            initialSpeedY: -LEVELS[0].ballSpeed
         };
 
         let blocks = [];
@@ -859,21 +762,60 @@
         // Maintain aspect ratio
         function resizeCanvas() {
             const container = document.getElementById('gameContainer');
+            const canvas = document.getElementById('gameCanvas');
+            
+            // Get container dimensions
             const containerWidth = container.clientWidth;
-            const aspectRatio = canvas.height / canvas.width;
-            canvas.style.width = containerWidth + 'px';
-            canvas.style.height = (containerWidth * aspectRatio) + 'px';
+            const containerHeight = container.clientHeight;
+            
+            // Calculate the best size maintaining 4:3 aspect ratio
+            let newWidth, newHeight;
+            
+            // Check if we're in landscape mode
+            const isLandscape = window.innerWidth > window.innerHeight;
+            
+            if (isLandscape) {
+                // In landscape, fit height and adjust width
+                newHeight = containerHeight;
+                newWidth = newHeight * (4/3);
+                
+                // If width exceeds container, adjust
+                if (newWidth > containerWidth) {
+                    newWidth = containerWidth;
+                    newHeight = newWidth * (3/4);
+                }
+            } else {
+                // In portrait, fit width and adjust height
+                newWidth = containerWidth;
+                newHeight = newWidth * (3/4);
+                
+                // If height exceeds container, adjust
+                if (newHeight > containerHeight) {
+                    newHeight = containerHeight;
+                    newWidth = newHeight * (4/3);
+                }
+            }
+            
+            // Set canvas size
+            canvas.width = 800;  // Logical canvas size
+            canvas.height = 600;
+            
+            // Set display size
+            canvas.style.width = `${newWidth}px`;
+            canvas.style.height = `${newHeight}px`;
+            
+            // Adjust game objects scale
+            const scaleX = canvas.width / newWidth;
+            const scaleY = canvas.height / newHeight;
+            
+            // Recalculate game object positions if needed
+            paddle.x *= scaleX;
+            ball.x *= scaleX;
+            ball.y *= scaleY;
         }
 
-        // Reset ball
-        function resetBall() {
-            const level = LEVELS[gameState.level - 1];
-            ball.x = paddle.x;  // Start ball above paddle
-            ball.y = paddle.y - ball.size;  // Just above paddle
-            // More varied initial angles
-            ball.speedX = (Math.random() * 1.4 - 0.7) * level.ballSpeed;
-            ball.speedY = -level.ballSpeed;
-        }
+        // Add orientation change listener
+        window.addEventListener('orientationchange', resizeCanvas);
 
         // Keyboard controls
         document.addEventListener('keydown', (e) => {
@@ -907,30 +849,62 @@
             const scaleX = canvas.width / rect.width;
             const touchX = (touch.clientX - rect.left) * scaleX;
             
-            // Immediate paddle movement
-            if (touchX < canvas.width / 2) {
+            // Check for double-tap to start/pause
+            const currentTime = new Date().getTime();
+            if (this.lastTapTime && (currentTime - this.lastTapTime) < 300) {
+                togglePause();
+                this.lastTapTime = null;
+                return;
+            }
+            this.lastTapTime = currentTime;
+            
+            // Divide screen into thirds
+            const screenThird = canvas.width / 3;
+            
+            // Left third: move left
+            if (touchX < screenThird) {
                 keys.left = true;
                 keys.right = false;
-            } else {
+            } 
+            // Right third: move right
+            else if (touchX > 2 * screenThird) {
                 keys.right = true;
                 keys.left = false;
+            } 
+            // Middle third: start/pause or do nothing
+            else {
+                // Optional: you could add a specific action for middle third
+                keys.left = false;
+                keys.right = false;
             }
         }
 
         function handleTouchMove(e) {
             e.preventDefault();
+            if (gameState.gameOver) return;
+            
             const touch = e.touches[0];
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
             const touchX = (touch.clientX - rect.left) * scaleX;
             
-            // Update movement based on touch position
-            if (touchX < canvas.width / 2) {
+            // Divide screen into thirds
+            const screenThird = canvas.width / 3;
+            
+            // Left third: move left
+            if (touchX < screenThird) {
                 keys.left = true;
                 keys.right = false;
-            } else {
+            } 
+            // Right third: move right
+            else if (touchX > 2 * screenThird) {
                 keys.right = true;
                 keys.left = false;
+            } 
+            // Middle third: stop movement
+            else {
+                keys.left = false;
+                keys.right = false;
             }
         }
 
@@ -943,6 +917,14 @@
         canvas.addEventListener('touchstart', handleTouchStart);
         canvas.addEventListener('touchmove', handleTouchMove);
         canvas.addEventListener('touchend', handleTouchEnd);
+        
+        // Prevent default touch behaviors
+        canvas.addEventListener('touchcancel', (e) => e.preventDefault());
+        document.body.addEventListener('touchmove', (e) => {
+            if (e.target === canvas) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
         // Pause functionality
         pauseButton.addEventListener('click', togglePause);
@@ -955,6 +937,11 @@
                 gameState.gameStarted = true;
                 gameState.paused = false;
                 pauseButton.textContent = 'Pause';
+                
+                // Set ball in motion with initial speeds
+                ball.speedX = ball.initialSpeedX;
+                ball.speedY = ball.initialSpeedY;
+                
                 return;
             }
 
