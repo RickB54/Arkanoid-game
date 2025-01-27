@@ -1246,6 +1246,13 @@
         resizeCanvas();
         createBlocks();
         gameLoop();
+
+        levelSelect.addEventListener('change', function() {
+            const selectedLevel = this.value;
+            if (selectedLevel) {
+                skipToLevel(selectedLevel);
+            }
+        });
     </script>
 </body>
 </html>
