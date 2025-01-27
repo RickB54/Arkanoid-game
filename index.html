@@ -1150,7 +1150,6 @@
             const isVisible = settingsMenu.style.display === 'block';
             settingsMenu.style.display = isVisible ? 'none' : 'block';
             document.getElementById('modalOverlay').style.display = isVisible ? 'none' : 'block';
-            document.getElementById('rulesModal').style.display = 'none';  // Always hide rules
             gameState.paused = !isVisible;
             pauseButton.textContent = isVisible ? 'Pause' : 'Resume';
         });
@@ -1169,21 +1168,77 @@
         }
 
         function skipToLevel(level) {
-            if (!level) return;
-            gameState.level = parseInt(level);
+            console.group('Skip to Level Debug');
+            console.log('Attempting to skip to level:', level);
+            console.log('Current game state:', JSON.stringify(gameState, null, 2));
+            console.log('Available levels:', LEVELS.length);
+
+            // Validate input
+            if (!level) {
+                console.error('No level provided');
+                return;
+            }
+
+            const parsedLevel = parseInt(level);
+            
+            // Validate level range
+            if (isNaN(parsedLevel) || parsedLevel < 1 || parsedLevel > LEVELS.length) {
+                console.error(`Invalid level: ${level}. Must be between 1 and ${LEVELS.length}`);
+                return;
+            }
+
+            // Update game state
+            gameState.level = parsedLevel;
+            
+            // Update UI elements
             levelElement.textContent = `Level: ${gameState.level}`;
+            scoreElement.textContent = `Score: 0`;
+            livesElement.textContent = `Lives: 3`;
+
+            // Get current level configuration
             const currentLevel = LEVELS[gameState.level - 1];
+            console.log('Selected level configuration:', JSON.stringify(currentLevel, null, 2));
+
+            // Reset game elements
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.gameStarted = true;
+            gameState.gameOver = false;
+
+            // Reset paddle
             paddle.width = currentLevel.paddleWidth;
-            ball.speedX = currentLevel.ballSpeed * (ball.speedX > 0 ? 1 : -1);
+            paddle.x = canvas.width / 2;  // Center paddle
+
+            // Reset ball
+            ball.speedX = currentLevel.ballSpeed * (Math.random() > 0.5 ? 1 : -1);
             ball.speedY = -currentLevel.ballSpeed;
-            createBlocks();
             resetBall();
-            powerUps = [];  // Clear any existing power-ups
+
+            // Recreate blocks for the new level
+            createBlocks();
+
+            // Clear any existing power-ups
+            powerUps = [];
+
+            // Close settings menu
             settingsMenu.style.display = 'none';
             gameState.paused = false;
             pauseButton.textContent = 'Pause';
+
+            // Reset level select dropdown
             levelSelect.value = '';
+
+            console.log('Successfully skipped to level:', gameState.level);
+            console.groupEnd();
         }
+
+        // Ensure level select has an event listener
+        levelSelect.addEventListener('change', function() {
+            console.log('Level select changed. Selected value:', this.value);
+            if (this.value) {
+                skipToLevel(this.value);
+            }
+        });
 
         function endGame() {
             showGameOver('Game Ended');
