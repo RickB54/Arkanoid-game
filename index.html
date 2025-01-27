@@ -1174,80 +1174,67 @@
         }
 
         function skipToLevel(level) {
-            console.group('Skip to Level Debug');
-            console.log('Attempting to skip to level:', level);
-            console.log('Current game state:', JSON.stringify(gameState, null, 2));
-            console.log('Available levels:', LEVELS.length);
+            try {
+                console.log('Attempting to skip to level:', level);
+                
+                // Validate level input
+                level = parseInt(level);
+                if (isNaN(level) || level < 1 || level > LEVELS.length) {
+                    console.error('Invalid level selection:', level);
+                    alert(`Please select a level between 1 and ${LEVELS.length}`);
+                    levelSelect.value = ''; // Reset dropdown
+                    return;
+                }
 
-            // Validate input
-            if (!level) {
-                console.error('No level provided');
-                return;
+                // Reset game state
+                gameState.level = level;
+                gameState.score = 0;
+                gameState.lives = 3;
+                gameState.paused = false;
+                gameState.gameStarted = false;
+                gameState.gameOver = false;
+
+                // Update UI elements
+                scoreElement.textContent = `Score: ${gameState.score}`;
+                livesElement.textContent = `Lives: ${gameState.lives}`;
+                levelElement.textContent = `Level: ${gameState.level}`;
+
+                // Clear existing game objects
+                blocks = [];
+                powerUps = [];
+                particles = [];
+
+                // Recreate blocks for the selected level
+                createBlocks();
+
+                // Reset ball and paddle
+                resetBall();
+                resetPaddle();
+
+                console.log('Successfully skipped to level:', level);
+            } catch (error) {
+                console.error('Error in skipToLevel:', error);
+                alert('An error occurred while changing levels. Please try again.');
             }
-
-            const parsedLevel = parseInt(level);
-            
-            // Validate level range
-            if (isNaN(parsedLevel) || parsedLevel < 1 || parsedLevel > LEVELS.length) {
-                console.error(`Invalid level: ${level}. Must be between 1 and ${LEVELS.length}`);
-                return;
-            }
-
-            // Update game state
-            gameState.level = parsedLevel;
-            
-            // Update UI elements
-            levelElement.textContent = `Level: ${gameState.level}`;
-            scoreElement.textContent = `Score: 0`;
-            livesElement.textContent = `Lives: 3`;
-
-            // Get current level configuration
-            const currentLevel = LEVELS[gameState.level - 1];
-            console.log('Selected level configuration:', JSON.stringify(currentLevel, null, 2));
-
-            // Reset game elements
-            gameState.score = 0;
-            gameState.lives = 3;
-            gameState.gameStarted = false;  // Prevent ball from moving
-            gameState.gameOver = false;
-
-            // Reset paddle
-            paddle.width = currentLevel.paddleWidth;
-            paddle.x = canvas.width / 2;  // Center paddle
-
-            // Reset ball completely
-            ball.x = paddle.x;  // Position ball on paddle
-            ball.y = paddle.y - ball.size;  // Just above paddle
-            ball.speedX = currentLevel.ballSpeed * (Math.random() > 0.5 ? 1 : -1);
-            ball.speedY = -currentLevel.ballSpeed;
-
-            // Pause the game to give player time to start
-            gameState.paused = true;
-            pauseButton.textContent = 'Start';
-
-            // Recreate blocks for the new level
-            createBlocks();
-
-            // Clear any existing power-ups
-            powerUps = [];
-
-            // Close settings menu
-            settingsMenu.style.display = 'none';
-
-            // Reset level select dropdown
-            levelSelect.value = '';
-
-            console.log('Successfully skipped to level:', gameState.level);
-            console.groupEnd();
         }
 
-        // Ensure level select has an event listener
-        levelSelect.addEventListener('change', function() {
-            console.log('Level select changed. Selected value:', this.value);
-            if (this.value) {
-                skipToLevel(this.value);
-            }
-        });
+        // Ensure level select has a robust event listener
+        const levelSelect = document.getElementById('levelSelect');
+        if (levelSelect) {
+            levelSelect.addEventListener('change', function() {
+                console.log('Level select changed. Selected value:', this.value);
+                if (this.value) {
+                    try {
+                        skipToLevel(this.value);
+                    } catch (error) {
+                        console.error('Error handling level select:', error);
+                        alert('Could not change level. Please try again.');
+                    }
+                }
+            });
+        } else {
+            console.error('Level select element not found');
+        }
 
         function endGame() {
             showGameOver('Game Ended');
@@ -1307,9 +1294,30 @@
 
         // Ensure game initialization
         function initGame() {
-            console.log('Initializing game...');
-            createBlocks();
-            gameLoop();
+            try {
+                console.log('Initializing game...');
+                
+                // Validate critical game elements
+                if (!canvas || !ctx) {
+                    throw new Error('Canvas or context not initialized');
+                }
+
+                // Clear any existing game state
+                blocks = [];
+                powerUps = [];
+                particles = [];
+
+                // Create initial blocks
+                createBlocks();
+
+                // Start game loop
+                gameLoop();
+
+                console.log('Game initialization complete');
+            } catch (error) {
+                console.error('Game initialization failed:', error);
+                alert('Failed to initialize the game. Please reload the page.');
+            }
         }
 
         // Start game when document is fully loaded
