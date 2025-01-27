@@ -373,7 +373,7 @@
         <div id="score" class="hud">Score: 0</div>
         <div id="lives" class="hud">Lives: 3</div>
         <div id="level" class="hud">Level: 1</div>
-        <button id="pauseButton">Pause</button>
+        <button id="pauseButton">Start</button>
         <button id="settingsButton">Settings</button>
         <div id="instructions">
             Desktop: Use ← → arrow keys<br>
@@ -552,8 +552,8 @@
                 pattern: [  // Level 7: Gauntlet
                     [3,0,3,0,0,3,0,3],
                     [0,2,0,3,3,0,2,0],
-                    [3,0,0,2,2,0,0,3],
-                    [0,3,2,0,0,2,3,0],
+                    [0,0,1,2,2,1,0,0],
+                    [0,1,2,0,0,2,1,0],
                     [3,0,3,2,2,3,0,3],
                     [0,2,0,3,3,0,2,0]
                 ],
@@ -869,7 +869,7 @@
         function resetBall() {
             const level = LEVELS[gameState.level - 1];
             ball.x = paddle.x;  // Start ball above paddle
-            ball.y = paddle.y - ball.size;
+            ball.y = paddle.y - ball.size;  // Just above paddle
             // More varied initial angles
             ball.speedX = (Math.random() * 1.4 - 0.7) * level.ballSpeed;
             ball.speedY = -level.ballSpeed;
@@ -948,6 +948,17 @@
         pauseButton.addEventListener('click', togglePause);
 
         function togglePause() {
+            if (gameState.gameOver) return;
+
+            // If game hasn't started, start the game
+            if (!gameState.gameStarted) {
+                gameState.gameStarted = true;
+                gameState.paused = false;
+                pauseButton.textContent = 'Pause';
+                return;
+            }
+
+            // Toggle pause state
             gameState.paused = !gameState.paused;
             pauseButton.textContent = gameState.paused ? 'Resume' : 'Pause';
         }
@@ -1202,17 +1213,22 @@
             // Reset game elements
             gameState.score = 0;
             gameState.lives = 3;
-            gameState.gameStarted = true;
+            gameState.gameStarted = false;  // Prevent ball from moving
             gameState.gameOver = false;
 
             // Reset paddle
             paddle.width = currentLevel.paddleWidth;
             paddle.x = canvas.width / 2;  // Center paddle
 
-            // Reset ball
+            // Reset ball completely
+            ball.x = paddle.x;  // Position ball on paddle
+            ball.y = paddle.y - ball.size;  // Just above paddle
             ball.speedX = currentLevel.ballSpeed * (Math.random() > 0.5 ? 1 : -1);
             ball.speedY = -currentLevel.ballSpeed;
-            resetBall();
+
+            // Pause the game to give player time to start
+            gameState.paused = true;
+            pauseButton.textContent = 'Start';
 
             // Recreate blocks for the new level
             createBlocks();
@@ -1222,8 +1238,6 @@
 
             // Close settings menu
             settingsMenu.style.display = 'none';
-            gameState.paused = false;
-            pauseButton.textContent = 'Pause';
 
             // Reset level select dropdown
             levelSelect.value = '';
