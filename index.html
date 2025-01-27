@@ -937,52 +937,92 @@
         // Pause functionality
         pauseButton.addEventListener('click', togglePause);
 
+        // Simplified game start and pause
         function togglePause() {
+            console.log('Toggle pause clicked', {
+                gameStarted: gameState.gameStarted,
+                gameOver: gameState.gameOver,
+                paused: gameState.paused
+            });
+
+            // If game is over, restart
             if (gameState.gameOver) {
                 restartGame();
                 return;
             }
 
-            gameState.paused = !gameState.paused;
-
+            // First time starting the game
             if (!gameState.gameStarted) {
-                // First time starting the game or a new level
                 gameState.gameStarted = true;
                 gameState.paused = false;
                 
-                // Set initial ball movement based on current level
+                // Set initial ball movement
                 const currentLevel = LEVELS[gameState.level - 1];
                 ball.speedX = currentLevel.ballSpeed * (Math.random() > 0.5 ? 1 : -1);
                 ball.speedY = -currentLevel.ballSpeed;
                 
                 pauseButton.textContent = 'Pause';
             } else {
-                // Regular pause/resume
+                // Toggle pause state
+                gameState.paused = !gameState.paused;
                 pauseButton.textContent = gameState.paused ? 'Resume' : 'Pause';
             }
         }
 
-        // Sound system
-        const sounds = {
-            paddleHit: document.getElementById('paddleHitSound'),
-            blockBreak: document.getElementById('blockBreakSound'),
-            lifeGain: document.getElementById('lifeGainSound'),
-            lifeLoss: document.getElementById('lifeLossSound')
-        };
+        // Comprehensive restart game function
+        function restartGame() {
+            console.log('Restarting game');
+            
+            // Reset game state
+            gameState = {
+                level: 1,
+                score: 0,
+                lives: 3,
+                paused: true,
+                gameStarted: false,
+                gameOver: false
+            };
 
-        function playSound(soundId) {
-            const sound = sounds[soundId];
-            if (sound) {
-                sound.currentTime = 0;  // Reset the sound to start
-                sound.play().catch(e => console.log('Error playing sound:', e));
+            // Reset UI elements
+            levelElement.textContent = `Level: ${gameState.level}`;
+            scoreElement.textContent = `Score: 0`;
+            livesElement.textContent = `Lives: 3`;
+            pauseButton.textContent = 'Start';
+
+            // Reset ball
+            ball.x = paddle.x + paddle.width / 2;
+            ball.y = paddle.y - ball.size;
+            ball.speedX = 0;
+            ball.speedY = 0;
+
+            // Reset paddle
+            const currentLevel = LEVELS[0];
+            paddle.width = currentLevel.paddleWidth;
+            paddle.x = canvas.width / 2 - paddle.width / 2;
+
+            // Reset game objects
+            blocks = [];
+            powerUps = [];
+            particles = [];
+
+            // Recreate blocks
+            createBlocks();
+
+            // Hide game over modal
+            const gameOverModal = document.getElementById('gameOverModal');
+            const modalOverlay = document.getElementById('modalOverlay');
+            if (gameOverModal && modalOverlay) {
+                gameOverModal.style.display = 'none';
+                modalOverlay.style.display = 'none';
             }
         }
 
-        // Update game state
+        // Update function with robust ball miss handling
         function update() {
+            // Skip update if paused or game over
             if (gameState.paused || gameState.gameOver) return;
 
-            // Move paddle based on input state
+            // Move paddle
             if (keys.left) {
                 paddle.x -= paddle.speed;
             }
@@ -990,97 +1030,78 @@
                 paddle.x += paddle.speed;
             }
             
-            // Keep paddle within bounds
-            paddle.x = Math.max(paddle.width/2, Math.min(canvas.width - paddle.width/2, paddle.x));
-
-            // Update power-ups
-            updatePowerUps();
-
-            // Update particles
-            updateParticles();
+            // Keep paddle within canvas
+            paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, paddle.x));
 
             // Move ball
             ball.x += ball.speedX;
             ball.y += ball.speedY;
 
             // Wall collisions
-            if (ball.x <= 0 || ball.x >= canvas.width - ball.size) {
+            if (ball.x <= 0 || ball.x + ball.size >= canvas.width) {
                 ball.speedX *= -1;
             }
+            
+            // Ceiling collision
             if (ball.y <= 0) {
                 ball.speedY *= -1;
             }
 
-            // Paddle collision
-            if (ball.y + ball.size >= paddle.y &&
-                ball.x >= paddle.x - paddle.width/2 &&
-                ball.x <= paddle.x + paddle.width/2) {
-                ball.speedY = -Math.abs(ball.speedY);
-                let hitPos = (ball.x - paddle.x) / (paddle.width/2);
-                ball.speedX = hitPos * 8;
-                playSound('paddleHit');
-            }
-
-            // Block collisions
-            blocks.forEach((block, index) => {
-                if (ball.x + ball.size >= block.x &&
-                    ball.x <= block.x + block.width &&
-                    ball.y + ball.size >= block.y &&
-                    ball.y <= block.y + block.height) {
-                    
-                    ball.speedY *= -1;
-                    handleBlockCollision(block, index);
-                    playSound('blockBreak');
-                }
-            });
-
-            // Level complete
-            if (blocks.length === 0) {
-                console.log(`Level ${gameState.level} complete`);
-                
-                if (gameState.level < LEVELS.length) {
-                    gameState.level++;
-                    levelElement.textContent = `Level: ${gameState.level}`;
-                    
-                    const level = LEVELS[gameState.level - 1];
-                    
-                    // Reset paddle width
-                    paddle.width = level.paddleWidth;
-                    paddle.x = canvas.width / 2 - paddle.width / 2;
-                    
-                    // Reset ball speed and direction
-                    ball.speedX = level.ballSpeed * (Math.random() > 0.5 ? 1 : -1);
-                    ball.speedY = -level.ballSpeed;
-                    
-                    // Recreate blocks for new level
-                    blocks = [];
-                    createBlocks();
-                    
-                    // Reset ball position
-                    ball.x = paddle.x + paddle.width / 2;
-                    ball.y = paddle.y - ball.size;
-                    
-                    // Pause game to allow player to prepare
-                    gameState.paused = true;
-                    pauseButton.textContent = 'Start';
-                    
-                    console.log(`Initialized level ${gameState.level}`);
-                } else {
-                    // Game completed
-                    showGameOver('Congratulations! You Won!');
-                }
-            }
-
-            // Ball falls below paddle
+            // Ball miss detection
             if (ball.y > canvas.height) {
                 gameState.lives--;
                 livesElement.textContent = `Lives: ${gameState.lives}`;
+                
                 if (gameState.lives > 0) {
-                    resetBall();
+                    // Reset ball position to paddle center
+                    ball.x = paddle.x + paddle.width / 2;
+                    ball.y = paddle.y - ball.size;
+                    ball.speedX = 0;
+                    ball.speedY = 0;
+                    
+                    // Pause game and prepare for restart
+                    gameState.paused = true;
+                    pauseButton.textContent = 'Start';
                 } else {
-                    showGameOver('Game Over');
+                    // Game over
+                    gameState.gameOver = true;
+                    pauseButton.textContent = 'Restart';
+                    
+                    // Show game over modal
+                    const gameOverModal = document.getElementById('gameOverModal');
+                    const modalOverlay = document.getElementById('modalOverlay');
+                    const gameOverMessage = document.getElementById('gameOverMessage');
+                    
+                    if (gameOverModal && modalOverlay && gameOverMessage) {
+                        gameOverMessage.textContent = 'Game Over';
+                        gameOverModal.style.display = 'block';
+                        modalOverlay.style.display = 'block';
+                    }
                 }
+                
+                // Prevent further processing
+                return;
             }
+
+            // Paddle collision
+            if (ball.y + ball.size >= paddle.y && 
+                ball.x + ball.size > paddle.x && 
+                ball.x < paddle.x + paddle.width) {
+                
+                // Bounce off paddle
+                ball.speedY = -Math.abs(ball.speedY);
+                
+                // Add angle based on where ball hits paddle
+                let hitPos = (ball.x - (paddle.x + paddle.width/2)) / (paddle.width/2);
+                ball.speedX = hitPos * 5;
+                
+                playSound('paddleHit');
+            }
+
+            // Block collision and game logic
+            updateBlocks();
+            updatePowerUps();
+            updateParticles();
         }
 
         // Draw game objects
@@ -1133,35 +1154,53 @@
             requestAnimationFrame(gameLoop);
         }
 
-        function showGameOver(message) {
-            const gameOverScreen = document.getElementById('gameOverScreen');
-            const gameOverTitle = document.getElementById('gameOverTitle');
-            const gameOverScore = document.getElementById('gameOverScore');
+        // Initialize game when document loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing game...');
             
-            gameOverTitle.textContent = message;
-            gameOverScore.textContent = `Final Score: ${gameState.score}`;
-            gameOverScreen.style.display = 'block';
-            gameState.gameOver = true;
-        }
+            // Ensure critical elements exist
+            if (!canvas || !ctx) {
+                console.error('Canvas not initialized');
+                return;
+            }
 
-        function restartGame() {
-            document.getElementById('gameOverScreen').style.display = 'none';
+            // Reset game state
             gameState = {
                 level: 1,
                 score: 0,
                 lives: 3,
-                paused: false,
+                paused: true,
                 gameStarted: false,
                 gameOver: false
             };
+
+            // Reset ball and paddle
+            const currentLevel = LEVELS[0];
+            paddle.width = currentLevel.paddleWidth;
+            paddle.x = canvas.width / 2 - paddle.width / 2;
+
+            ball.x = paddle.x + paddle.width / 2;
+            ball.y = paddle.y - ball.size;
+            ball.speedX = 0;
+            ball.speedY = 0;
+
+            // Reset UI
             levelElement.textContent = `Level: ${gameState.level}`;
-            scoreElement.textContent = `Score: ${gameState.score}`;
-            livesElement.textContent = `Lives: ${gameState.lives}`;
-            paddle.width = LEVELS[0].paddleWidth;
+            scoreElement.textContent = `Score: 0`;
+            livesElement.textContent = `Lives: 3`;
+            pauseButton.textContent = 'Start';
+
+            // Reset game objects
+            blocks = [];
+            powerUps = [];
+            particles = [];
+
+            // Create initial blocks
             createBlocks();
-            resetBall();
-            powerUps = [];  // Clear any existing power-ups
-        }
+
+            // Start game loop
+            gameLoop();
+        });
 
         // Settings functionality
         const settingsButton = document.getElementById('settingsButton');
