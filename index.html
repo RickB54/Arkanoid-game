@@ -1036,16 +1036,37 @@
 
             // Level complete
             if (blocks.length === 0) {
+                console.log(`Level ${gameState.level} complete`);
+                
                 if (gameState.level < LEVELS.length) {
                     gameState.level++;
                     levelElement.textContent = `Level: ${gameState.level}`;
+                    
                     const level = LEVELS[gameState.level - 1];
+                    
+                    // Reset paddle width
                     paddle.width = level.paddleWidth;
-                    ball.speedX = level.ballSpeed * (ball.speedX > 0 ? 1 : -1);
+                    paddle.x = canvas.width / 2 - paddle.width / 2;
+                    
+                    // Reset ball speed and direction
+                    ball.speedX = level.ballSpeed * (Math.random() > 0.5 ? 1 : -1);
                     ball.speedY = -level.ballSpeed;
+                    
+                    // Recreate blocks for new level
+                    blocks = [];
                     createBlocks();
-                    resetBall();
+                    
+                    // Reset ball position
+                    ball.x = paddle.x + paddle.width / 2;
+                    ball.y = paddle.y - ball.size;
+                    
+                    // Pause game to allow player to prepare
+                    gameState.paused = true;
+                    pauseButton.textContent = 'Start';
+                    
+                    console.log(`Initialized level ${gameState.level}`);
                 } else {
+                    // Game completed
                     showGameOver('Congratulations! You Won!');
                 }
             }
