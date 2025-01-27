@@ -359,6 +359,18 @@
         </ul>
     </div>
     <script>
+        console.log('Script is loading...');
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error('Global error:', {
+                message: message,
+                source: source,
+                lineno: lineno,
+                colno: colno,
+                error: error
+            });
+            return false;
+        };
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('score');
@@ -628,41 +640,45 @@
 
         // Modified block creation to include life-draining blocks
         function createBlocks() {
+            // Clear existing blocks
             blocks = [];
-            const level = LEVELS[gameState.level - 1];
-            const pattern = level.pattern;
             
-            const blockWidth = canvas.width / 8;
-            const blockHeight = 20;
+            // Get current level configuration
+            const currentLevel = LEVELS[gameState.level - 1];
+            console.log('Creating blocks for level:', gameState.level);
+            console.log('Level pattern:', currentLevel.pattern);
             
-            // Add regular blocks
-            for (let row = 0; row < pattern.length; row++) {
-                for (let col = 0; col < pattern[row].length; col++) {
-                    if (pattern[row][col] > 0) {
-                        const block = {
-                            x: col * blockWidth + 1,
-                            y: row * blockHeight + 50,
-                            width: blockWidth - 2,
-                            height: blockHeight - 2,
-                            hits: pattern[row][col],
-                            maxHits: pattern[row][col],
-                            isDrainLife: false
-                        };
-                        blocks.push(block);
+            // Validate pattern
+            if (!currentLevel.pattern || !Array.isArray(currentLevel.pattern)) {
+                console.error('Invalid block pattern for level:', gameState.level);
+                return;
+            }
+            
+            // Calculate block positioning
+            const rows = currentLevel.pattern;
+            const blockWidth = BLOCK_WIDTH;
+            const blockHeight = BLOCK_HEIGHT;
+            const padding = 10;
+            const offsetX = (canvas.width - (rows[0].length * (blockWidth + padding))) / 2;
+            const offsetY = 50;
+            
+            // Create blocks based on pattern
+            rows.forEach((row, rowIndex) => {
+                row.forEach((blockType, colIndex) => {
+                    if (blockType > 0) {
+                        blocks.push({
+                            x: offsetX + colIndex * (blockWidth + padding),
+                            y: offsetY + rowIndex * (blockHeight + padding),
+                            width: blockWidth,
+                            height: blockHeight,
+                            type: blockType,
+                            hits: blockType === 3 ? 3 : 1
+                        });
                     }
-                }
-            }
-
-            // Add life-draining blocks from level 2 onwards
-            if (gameState.level >= 2 && blocks.length > 0) {
-                for (let i = 0; i < DRAIN_LIFE_BLOCKS; i++) {
-                    const randomBlock = blocks[Math.floor(Math.random() * blocks.length)];
-                    randomBlock.isDrainLife = true;
-                    // Make drain life blocks visually distinct
-                    randomBlock.hits = 1;  // Always one hit
-                    randomBlock.maxHits = 1;
-                }
-            }
+                });
+            });
+            
+            console.log('Total blocks created:', blocks.length);
         }
 
         // Modified block collision to handle life-draining blocks
@@ -670,14 +686,14 @@
             block.hits--;
             if (block.hits <= 0) {
                 blocks.splice(index, 1);
-                gameState.score += 10 * block.maxHits;
+                gameState.score += 10 * block.type;
                 scoreElement.textContent = `Score: ${gameState.score}`;
                 
                 // Create particles at block position
                 createParticles(block.x + block.width/2, block.y + block.height/2);
                 
                 // Create power-up
-                if (block.isDrainLife) {
+                if (block.type === 3) {
                     createPowerUp(block.x + block.width/2, block.y + block.height/2, 'drainLife');
                 } else {
                     createPowerUp(block.x + block.width/2, block.y + block.height/2);
@@ -687,31 +703,23 @@
 
         // Modified block drawing to show life-draining blocks
         function drawBlocks() {
-            blocks.forEach(block => {
-                if (block.isDrainLife) {
-                    ctx.fillStyle = '#FF0000';  // Bright red for life-draining blocks
-                } else {
-                    const hitRatio = block.hits / block.maxHits;
-                    if (hitRatio === 1) ctx.fillStyle = '#4CAF50';  // Green
-                    else if (hitRatio >= 0.6) ctx.fillStyle = '#FFA500';  // Orange
-                    else ctx.fillStyle = '#FF4136';  // Red
+            console.log('Drawing blocks:', blocks.length);
+            blocks.forEach((block, index) => {
+                // Determine block color based on type
+                let fillColor;
+                switch(block.type) {
+                    case 1: fillColor = COLORS[0][0]; break;  // Red
+                    case 2: fillColor = COLORS[1][0]; break;  // Green
+                    case 3: fillColor = COLORS[2][0]; break;  // Blue
+                    default: fillColor = COLORS[0][0];
                 }
+                
+                ctx.fillStyle = fillColor;
                 ctx.fillRect(block.x, block.y, block.width, block.height);
                 
-                // Add skull symbol to life-draining blocks
-                if (block.isDrainLife) {
-                    ctx.fillStyle = 'white';
-                    ctx.beginPath();
-                    const centerX = block.x + block.width/2;
-                    const centerY = block.y + block.height/2;
-                    ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
-                    ctx.fillRect(centerX - 4, centerY + 2, 8, 2);
-                    ctx.fill();
-                }
-                
-                // Highlight effect
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.fillRect(block.x, block.y, block.width, block.height / 3);
+                // Optional: add block hit points visualization
+                ctx.strokeStyle = 'white';
+                ctx.strokeRect(block.x, block.y, block.width, block.height);
             });
         }
 
@@ -1297,18 +1305,15 @@
         };
         document.getElementById('gameContainer').appendChild(muteButton);
 
-        // Start game
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        createBlocks();
-        gameLoop();
+        // Ensure game initialization
+        function initGame() {
+            console.log('Initializing game...');
+            createBlocks();
+            gameLoop();
+        }
 
-        levelSelect.addEventListener('change', function() {
-            const selectedLevel = this.value;
-            if (selectedLevel) {
-                skipToLevel(selectedLevel);
-            }
-        });
+        // Start game when document is fully loaded
+        document.addEventListener('DOMContentLoaded', initGame);
     </script>
 </body>
 </html>
