@@ -938,24 +938,28 @@
         pauseButton.addEventListener('click', togglePause);
 
         function togglePause() {
-            if (gameState.gameOver) return;
-
-            // If game hasn't started, start the game
-            if (!gameState.gameStarted) {
-                gameState.gameStarted = true;
-                gameState.paused = false;
-                pauseButton.textContent = 'Pause';
-                
-                // Set ball in motion with initial speeds
-                ball.speedX = ball.initialSpeedX;
-                ball.speedY = ball.initialSpeedY;
-                
+            if (gameState.gameOver) {
+                restartGame();
                 return;
             }
 
-            // Toggle pause state
             gameState.paused = !gameState.paused;
-            pauseButton.textContent = gameState.paused ? 'Resume' : 'Pause';
+
+            if (!gameState.gameStarted) {
+                // First time starting the game or a new level
+                gameState.gameStarted = true;
+                gameState.paused = false;
+                
+                // Set initial ball movement based on current level
+                const currentLevel = LEVELS[gameState.level - 1];
+                ball.speedX = currentLevel.ballSpeed * (Math.random() > 0.5 ? 1 : -1);
+                ball.speedY = -currentLevel.ballSpeed;
+                
+                pauseButton.textContent = 'Pause';
+            } else {
+                // Regular pause/resume
+                pauseButton.textContent = gameState.paused ? 'Resume' : 'Pause';
+            }
         }
 
         // Sound system
@@ -1126,7 +1130,7 @@
                 score: 0,
                 lives: 3,
                 paused: false,
-                gameStarted: true,
+                gameStarted: false,
                 gameOver: false
             };
             levelElement.textContent = `Level: ${gameState.level}`;
@@ -1174,153 +1178,201 @@
         }
 
         function skipToLevel(level) {
-            try {
-                console.log('Attempting to skip to level:', level);
-                
-                // Validate level input
-                level = parseInt(level);
-                if (isNaN(level) || level < 1 || level > LEVELS.length) {
-                    console.error('Invalid level selection:', level);
-                    alert(`Please select a level between 1 and ${LEVELS.length}`);
-                    levelSelect.value = ''; // Reset dropdown
-                    return;
-                }
+            console.log('Attempting to skip to level:', level);
+            
+            // Basic validation
+            level = parseInt(level);
+            if (isNaN(level) || level < 1 || level > LEVELS.length) {
+                console.error('Invalid level:', level);
+                return;
+            }
 
-                // Reset game state
-                gameState.level = level;
-                gameState.score = 0;
-                gameState.lives = 3;
+            // Reset core game state
+            gameState.level = level;
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.paused = true;  // Pause to give player control
+            gameState.gameStarted = false;
+
+            // Clear existing game objects
+            blocks = [];
+            powerUps = [];
+            particles = [];
+
+            // Recreate blocks
+            createBlocks();
+
+            // Reset ball and paddle
+            paddle.x = canvas.width / 2 - paddle.width / 2;
+            paddle.width = LEVELS[level - 1].paddleWidth;
+
+            ball.x = paddle.x + paddle.width / 2;
+            ball.y = paddle.y - ball.size;
+            ball.speedX = 0;
+            ball.speedY = 0;
+
+            // Update UI
+            levelElement.textContent = `Level: ${gameState.level}`;
+            scoreElement.textContent = `Score: 0`;
+            livesElement.textContent = `Lives: 3`;
+            pauseButton.textContent = 'Start';  // Indicate game is ready to start
+        }
+
+        // Modify togglePause to handle game start and resume
+        function togglePause() {
+            if (gameState.gameOver) {
+                restartGame();
+                return;
+            }
+
+            gameState.paused = !gameState.paused;
+
+            if (!gameState.gameStarted) {
+                // First time starting the game or a new level
+                gameState.gameStarted = true;
                 gameState.paused = false;
-                gameState.gameStarted = false;
-                gameState.gameOver = false;
-
-                // Update UI elements
-                scoreElement.textContent = `Score: ${gameState.score}`;
-                livesElement.textContent = `Lives: ${gameState.lives}`;
-                levelElement.textContent = `Level: ${gameState.level}`;
-
-                // Clear existing game objects
-                blocks = [];
-                powerUps = [];
-                particles = [];
-
-                // Recreate blocks for the selected level
-                createBlocks();
-
-                // Reset ball and paddle
-                resetBall();
-                resetPaddle();
-
-                console.log('Successfully skipped to level:', level);
-            } catch (error) {
-                console.error('Error in skipToLevel:', error);
-                alert('An error occurred while changing levels. Please try again.');
+                
+                // Set initial ball movement based on current level
+                const currentLevel = LEVELS[gameState.level - 1];
+                ball.speedX = currentLevel.ballSpeed * (Math.random() > 0.5 ? 1 : -1);
+                ball.speedY = -currentLevel.ballSpeed;
+                
+                pauseButton.textContent = 'Pause';
+            } else {
+                // Regular pause/resume
+                pauseButton.textContent = gameState.paused ? 'Resume' : 'Pause';
             }
         }
 
-        // Ensure level select has a robust event listener
-        const levelSelect = document.getElementById('levelSelect');
-        if (levelSelect) {
-            levelSelect.addEventListener('change', function() {
-                console.log('Level select changed. Selected value:', this.value);
-                if (this.value) {
-                    try {
-                        skipToLevel(this.value);
-                    } catch (error) {
-                        console.error('Error handling level select:', error);
-                        alert('Could not change level. Please try again.');
-                    }
-                }
-            });
-        } else {
-            console.error('Level select element not found');
+        // Modify initGame to set initial state
+        function initGame() {
+            console.log('Initializing game...');
+            
+            // Ensure critical elements exist
+            if (!canvas || !ctx) {
+                console.error('Canvas not initialized');
+                return;
+            }
+
+            // Reset game state
+            gameState.level = 1;
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.paused = true;
+            gameState.gameStarted = false;
+            gameState.gameOver = false;
+
+            // Initialize game objects
+            blocks = [];
+            powerUps = [];
+            particles = [];
+
+            // Create initial blocks
+            createBlocks();
+
+            // Reset ball and paddle
+            paddle.x = canvas.width / 2 - paddle.width / 2;
+            paddle.width = LEVELS[0].paddleWidth;
+
+            ball.x = paddle.x + paddle.width / 2;
+            ball.y = paddle.y - ball.size;
+            ball.speedX = 0;
+            ball.speedY = 0;
+
+            // Update UI
+            levelElement.textContent = `Level: 1`;
+            scoreElement.textContent = `Score: 0`;
+            livesElement.textContent = `Lives: 3`;
+            pauseButton.textContent = 'Start';
+
+            // Start game loop
+            gameLoop();
         }
 
-        function endGame() {
-            showGameOver('Game Ended');
-            settingsMenu.style.display = 'none';
-        }
+        // Attach event listener to level select
+        document.getElementById('levelSelect').addEventListener('change', function() {
+            const selectedLevel = this.value;
+            if (selectedLevel) {
+                skipToLevel(selectedLevel);
+            }
+        });
 
+        // Rules and settings functions
         function showRules() {
             settingsMenu.style.display = 'none';  // Hide settings menu
-            document.getElementById('rulesModal').style.display = 'block';
-            document.getElementById('modalOverlay').style.display = 'block';
-            gameState.paused = true;
-            pauseButton.textContent = 'Resume';
+            const rulesModal = document.getElementById('rulesModal');
+            const modalOverlay = document.getElementById('modalOverlay');
+            
+            if (rulesModal && modalOverlay) {
+                rulesModal.style.display = 'block';
+                modalOverlay.style.display = 'block';
+                gameState.paused = true;
+                pauseButton.textContent = 'Resume';
+            } else {
+                console.error('Rules modal elements not found');
+            }
         }
 
         function closeRules() {
-            document.getElementById('rulesModal').style.display = 'none';
-            document.getElementById('modalOverlay').style.display = 'none';
-            gameState.paused = false;
-            pauseButton.textContent = 'Pause';
-        }
-
-        function backToSettings() {
-            document.getElementById('rulesModal').style.display = 'none';
-            settingsMenu.style.display = 'block';
-        }
-
-        // Close modals when clicking overlay
-        document.getElementById('modalOverlay').addEventListener('click', () => {
-            closeRules();
-            settingsMenu.style.display = 'none';
-        });
-
-        // Add mute button
-        const muteButton = document.createElement('button');
-        muteButton.textContent = '';
-        muteButton.style.position = 'absolute';
-        muteButton.style.top = '10px';
-        muteButton.style.left = '10px';
-        muteButton.style.zIndex = '1000';
-        muteButton.style.background = 'none';
-        muteButton.style.border = '2px solid #4CAF50';
-        muteButton.style.color = '#4CAF50';
-        muteButton.style.padding = '8px';
-        muteButton.style.borderRadius = '5px';
-        muteButton.style.cursor = 'pointer';
-        muteButton.style.transition = 'all 0.3s ease';
-
-        let muted = false;
-        muteButton.onclick = () => {
-            muted = !muted;
-            muteButton.textContent = muted ? '' : '';
-            Object.values(sounds).forEach(sound => {
-                sound.muted = muted;
-            });
-        };
-        document.getElementById('gameContainer').appendChild(muteButton);
-
-        // Ensure game initialization
-        function initGame() {
-            try {
-                console.log('Initializing game...');
-                
-                // Validate critical game elements
-                if (!canvas || !ctx) {
-                    throw new Error('Canvas or context not initialized');
-                }
-
-                // Clear any existing game state
-                blocks = [];
-                powerUps = [];
-                particles = [];
-
-                // Create initial blocks
-                createBlocks();
-
-                // Start game loop
-                gameLoop();
-
-                console.log('Game initialization complete');
-            } catch (error) {
-                console.error('Game initialization failed:', error);
-                alert('Failed to initialize the game. Please reload the page.');
+            const rulesModal = document.getElementById('rulesModal');
+            const modalOverlay = document.getElementById('modalOverlay');
+            
+            if (rulesModal && modalOverlay) {
+                rulesModal.style.display = 'none';
+                modalOverlay.style.display = 'none';
+                gameState.paused = false;
+                pauseButton.textContent = 'Pause';
             }
         }
 
-        // Start game when document is fully loaded
+        function toggleRules() {
+            const rulesModal = document.getElementById('rulesModal');
+            if (rulesModal.style.display === 'block') {
+                closeRules();
+            } else {
+                showRules();
+            }
+        }
+
+        function backToSettings() {
+            const rulesModal = document.getElementById('rulesModal');
+            const settingsMenu = document.getElementById('settingsMenu');
+            
+            if (rulesModal && settingsMenu) {
+                rulesModal.style.display = 'none';
+                settingsMenu.style.display = 'block';
+            }
+        }
+
+        // Close modals when clicking overlay
+        const modalOverlay = document.getElementById('modalOverlay');
+        if (modalOverlay) {
+            modalOverlay.addEventListener('click', () => {
+                closeRules();
+                const settingsMenu = document.getElementById('settingsMenu');
+                if (settingsMenu) {
+                    settingsMenu.style.display = 'none';
+                }
+            });
+        }
+
+        // Attach event listeners to rules-related buttons
+        const rulesButton = document.getElementById('rulesButton');
+        if (rulesButton) {
+            rulesButton.addEventListener('click', showRules);
+        }
+
+        const closeRulesButton = document.getElementById('closeRulesButton');
+        if (closeRulesButton) {
+            closeRulesButton.addEventListener('click', closeRules);
+        }
+
+        const backToSettingsButton = document.getElementById('backToSettingsButton');
+        if (backToSettingsButton) {
+            backToSettingsButton.addEventListener('click', backToSettings);
+        }
+
+        // Initialize game when document loads
         document.addEventListener('DOMContentLoaded', initGame);
     </script>
 </body>
