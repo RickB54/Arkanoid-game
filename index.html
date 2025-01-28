@@ -4,6 +4,30 @@
     <title>Web Arkanoid</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
+        /* Mobile-first responsive design */
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #gameContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+        }
+        #gameCanvas {
+            max-width: 100%;
+            max-height: 100%;
+            aspect-ratio: 4/3;
+        }
+
         body {
             margin: 0;
             display: flex;
@@ -234,6 +258,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
+            margin: 4px 2px;
             transition: all 0.3s ease;
         }
 
@@ -269,10 +294,8 @@
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <audio id="paddleHitSound" src="sounds/paddle-hit.mp3" preload="auto"></audio>
         <audio id="blockBreakSound" src="sounds/block-break.mp3" preload="auto"></audio>
-        <audio id="lifeGainSound" src="sounds/life-gain.mp3" preload="auto"></audio>
-        <audio id="lifeLossSound" src="sounds/life-loss.mp3" preload="auto"></audio>
         <div id="score" class="hud">Score: 0</div>
-        <div id="lives" class="hud">Lives: 3</div>
+        <div id="lives" class="hud">Lives: 4</div>
         <div id="level" class="hud">Level: 1</div>
         <button id="pauseButton">Start</button>
         <button id="settingsButton">Settings</button>
@@ -314,7 +337,7 @@
             <li>Move the paddle left and right to bounce the ball</li>
             <li>Break all blocks to complete each level</li>
             <li>Don't let the ball fall below the paddle</li>
-            <li>You start with 3 lives</li>
+            <li>You start with 4 lives</li>
             <li>Higher levels increase ball speed by 20% each time</li>
         </ul>
 
@@ -371,7 +394,7 @@
             level: 1,
             score: 0,
             lives: 3,
-            paused: false,
+            paused: true,
             gameStarted: false,
             gameOver: false
         };
@@ -950,19 +973,44 @@
             pauseButton.textContent = gameState.paused ? 'Resume' : 'Pause';
         }
 
-        // Sound system
+        // Sound system with fallback
         const sounds = {
             paddleHit: document.getElementById('paddleHitSound'),
-            blockBreak: document.getElementById('blockBreakSound'),
-            lifeGain: document.getElementById('lifeGainSound'),
-            lifeLoss: document.getElementById('lifeLossSound')
+            blockBreak: document.getElementById('blockBreakSound')
         };
 
         function playSound(soundId) {
-            const sound = sounds[soundId];
-            if (sound) {
-                sound.currentTime = 0;  // Reset the sound to start
-                sound.play().catch(e => console.log('Error playing sound:', e));
+            try {
+                const sound = sounds[soundId];
+                if (sound) {
+                    sound.currentTime = 0;  // Reset to start
+                    sound.play().catch(error => {
+                        console.warn(`Error playing ${soundId} sound:`, error);
+                    });
+                }
+            } catch (error) {
+                console.warn('Error playing sound:', error);
+            }
+        }
+
+        // Reset Ball Function
+        function resetBall() {
+            // Reset ball position to paddle
+            ball.x = paddle.x + paddle.width / 2;
+            ball.y = paddle.y - ball.size;
+            
+            // Stop ball movement
+            ball.speedX = 0;
+            ball.speedY = 0;
+            
+            // Reset game state
+            gameState.gameStarted = false;
+            gameState.paused = true;
+            
+            // Update pause button
+            const pauseButton = document.getElementById('pauseButton');
+            if (pauseButton) {
+                pauseButton.textContent = 'Start';
             }
         }
 
@@ -1038,14 +1086,18 @@
                 }
             }
 
-            // Ball falls below paddle
-            if (ball.y > canvas.height) {
+            // Ball out of bounds
+            if (ball.y + ball.size > canvas.height) {
                 gameState.lives--;
                 livesElement.textContent = `Lives: ${gameState.lives}`;
-                if (gameState.lives > 0) {
-                    resetBall();
-                } else {
+                
+                if (gameState.lives < 1) {
+                    // Game over logic
+                    gameState.gameOver = true;
                     showGameOver('Game Over');
+                } else {
+                    // Reset ball
+                    resetBall();
                 }
             }
         }
@@ -1112,22 +1164,123 @@
         }
 
         function restartGame() {
-            document.getElementById('gameOverScreen').style.display = 'none';
-            gameState = {
-                level: 1,
-                score: 0,
-                lives: 3,
-                paused: false,
-                gameStarted: true,
-                gameOver: false
-            };
-            levelElement.textContent = `Level: ${gameState.level}`;
-            scoreElement.textContent = `Score: ${gameState.score}`;
-            livesElement.textContent = `Lives: ${gameState.lives}`;
-            paddle.width = LEVELS[0].paddleWidth;
-            createBlocks();
-            resetBall();
-            powerUps = [];  // Clear any existing power-ups
+            console.group('Restart Game Debug');
+            console.log('Current game state before restart:', JSON.stringify(gameState, null, 2));
+            
+            try {
+                // Reset game state
+                gameState = {
+                    level: 1,
+                    score: 0,
+                    lives: 3,
+                    paused: false,
+                    gameStarted: true,
+                    gameOver: false
+                };
+
+                // Reset UI elements
+                const levelElement = document.getElementById('level');
+                const scoreElement = document.getElementById('score');
+                const livesElement = document.getElementById('lives');
+                const pauseButton = document.getElementById('pauseButton');
+
+                if (levelElement) levelElement.textContent = `Level: ${gameState.level}`;
+                if (scoreElement) scoreElement.textContent = `Score: 0`;
+                if (livesElement) livesElement.textContent = `Lives: 3`;
+                if (pauseButton) pauseButton.textContent = 'Pause';
+
+                // Reset game objects
+                console.log('Resetting game objects');
+                
+                // Recreate blocks
+                createBlocks();
+
+                // Reset paddle
+                paddle.x = canvas.width / 2 - paddle.width / 2;
+                paddle.y = canvas.height - paddle.height - 10;
+
+                // Reset ball
+                ball.x = paddle.x + paddle.width / 2;
+                ball.y = paddle.y - ball.size;
+                ball.speedX = LEVELS[0].ballSpeed * (Math.random() > 0.5 ? 1 : -1);
+                ball.speedY = -LEVELS[0].ballSpeed;
+
+                // Clear any existing power-ups
+                powerUps = [];
+
+                // Ensure game loop continues
+                gameState.gameOver = false;
+                requestAnimationFrame(gameLoop);
+
+                console.log('Game restart completed successfully');
+            } catch (error) {
+                console.error('Error during game restart:', error);
+                alert('Failed to restart game. Please refresh the page.');
+            }
+            
+            console.groupEnd();
+        }
+
+        function skipToLevel(level) {
+            console.group('Skip to Level Debug');
+            console.log('Attempting to skip to level:', level);
+            
+            try {
+                // Validate level
+                const parsedLevel = parseInt(level);
+                if (isNaN(parsedLevel) || parsedLevel < 1 || parsedLevel > LEVELS.length) {
+                    console.error(`Invalid level: ${level}. Must be between 1 and ${LEVELS.length}`);
+                    return;
+                }
+
+                // Update game state
+                gameState.level = parsedLevel;
+                
+                // Update UI
+                const levelElement = document.getElementById('level');
+                const scoreElement = document.getElementById('score');
+                const livesElement = document.getElementById('lives');
+                
+                if (levelElement) levelElement.textContent = `Level: ${gameState.level}`;
+                if (scoreElement) scoreElement.textContent = `Score: 0`;
+                if (livesElement) livesElement.textContent = `Lives: 3`;
+
+                // Get current level configuration
+                const currentLevel = LEVELS[gameState.level - 1];
+                console.log('Selected level configuration:', JSON.stringify(currentLevel, null, 2));
+
+                // Reset game elements
+                gameState.score = 0;
+                gameState.lives = 3;
+                gameState.gameStarted = false;
+                gameState.gameOver = false;
+
+                // Reset paddle
+                paddle.width = currentLevel.paddleWidth;
+                paddle.x = canvas.width / 2 - paddle.width / 2;
+
+                // Reset ball
+                ball.x = paddle.x + paddle.width / 2;
+                ball.y = paddle.y - ball.size;
+                ball.speedX = currentLevel.ballSpeed * (Math.random() > 0.5 ? 1 : -1);
+                ball.speedY = -currentLevel.ballSpeed;
+
+                // Recreate blocks for the new level
+                createBlocks();
+
+                // Clear power-ups
+                powerUps = [];
+
+                // Ensure game loop continues
+                requestAnimationFrame(gameLoop);
+
+                console.log('Successfully skipped to level:', gameState.level);
+            } catch (error) {
+                console.error('Error during level skip:', error);
+                alert('Failed to change level. Please refresh the page.');
+            }
+            
+            console.groupEnd();
         }
 
         // Settings functionality
@@ -1136,13 +1289,19 @@
         const rulesContent = document.getElementById('rulesContent');
         const levelSelect = document.getElementById('levelSelect');
 
-        // Populate level select
-        for (let i = 1; i <= LEVELS.length; i++) {
+        // Populate level select with unique levels
+        levelSelect.innerHTML = ''; // Clear existing options
+
+        // Create a set of unique levels
+        const uniqueLevels = [...new Set(LEVELS.map((_, index) => index + 1))];
+        
+        // Add unique level options
+        uniqueLevels.forEach(level => {
             const option = document.createElement('option');
-            option.value = i;
-            option.textContent = `Level ${i}`;
+            option.value = level;
+            option.textContent = `Level ${level}`;
             levelSelect.appendChild(option);
-        }
+        });
 
         settingsButton.addEventListener('click', () => {
             const isVisible = settingsMenu.style.display === 'block';
@@ -1168,69 +1327,72 @@
         function skipToLevel(level) {
             console.group('Skip to Level Debug');
             console.log('Attempting to skip to level:', level);
-            console.log('Current game state:', JSON.stringify(gameState, null, 2));
-            console.log('Available levels:', LEVELS.length);
-
-            // Validate input
-            if (!level) {
-                console.error('No level provided');
-                return;
-            }
-
-            const parsedLevel = parseInt(level);
             
-            // Validate level range
-            if (isNaN(parsedLevel) || parsedLevel < 1 || parsedLevel > LEVELS.length) {
-                console.error(`Invalid level: ${level}. Must be between 1 and ${LEVELS.length}`);
-                return;
+            try {
+                // Validate input
+                if (!level) {
+                    console.error('No level provided');
+                    return;
+                }
+
+                const parsedLevel = parseInt(level);
+                
+                // Validate level range
+                if (isNaN(parsedLevel) || parsedLevel < 1 || parsedLevel > LEVELS.length) {
+                    console.error(`Invalid level: ${level}. Must be between 1 and ${LEVELS.length}`);
+                    return;
+                }
+
+                // Update game state
+                gameState.level = parsedLevel;
+                
+                // Update UI elements
+                levelElement.textContent = `Level: ${gameState.level}`;
+                scoreElement.textContent = `Score: 0`;
+                livesElement.textContent = `Lives: 3`;
+
+                // Get current level configuration
+                const currentLevel = LEVELS[gameState.level - 1];
+                console.log('Selected level configuration:', JSON.stringify(currentLevel, null, 2));
+
+                // Reset game elements
+                gameState.score = 0;
+                gameState.lives = 3;
+                gameState.gameStarted = false;  // Prevent ball from moving
+                gameState.gameOver = false;
+
+                // Reset paddle
+                paddle.width = currentLevel.paddleWidth;
+                paddle.x = canvas.width / 2;  // Center paddle
+
+                // Reset ball completely
+                ball.x = paddle.x;  // Position ball on paddle
+                ball.y = paddle.y - ball.size;  // Just above paddle
+                ball.speedX = currentLevel.ballSpeed * (ball.speedX > 0 ? 1 : -1);
+                ball.speedY = -currentLevel.ballSpeed;
+
+                // Pause the game to give player time to start
+                gameState.paused = true;
+                pauseButton.textContent = 'Start';
+
+                // Recreate blocks for the new level
+                createBlocks();
+
+                // Clear any existing power-ups
+                powerUps = [];
+
+                // Close settings menu
+                settingsMenu.style.display = 'none';
+
+                // Reset level select dropdown
+                levelSelect.value = '';
+
+                console.log('Successfully skipped to level:', gameState.level);
+                console.groupEnd();
+            } catch (error) {
+                console.error('Error during level skip:', error);
+                alert('Failed to change level. Please refresh the page.');
             }
-
-            // Update game state
-            gameState.level = parsedLevel;
-            
-            // Update UI elements
-            levelElement.textContent = `Level: ${gameState.level}`;
-            scoreElement.textContent = `Score: 0`;
-            livesElement.textContent = `Lives: 3`;
-
-            // Get current level configuration
-            const currentLevel = LEVELS[gameState.level - 1];
-            console.log('Selected level configuration:', JSON.stringify(currentLevel, null, 2));
-
-            // Reset game elements
-            gameState.score = 0;
-            gameState.lives = 3;
-            gameState.gameStarted = false;  // Prevent ball from moving
-            gameState.gameOver = false;
-
-            // Reset paddle
-            paddle.width = currentLevel.paddleWidth;
-            paddle.x = canvas.width / 2;  // Center paddle
-
-            // Reset ball completely
-            ball.x = paddle.x;  // Position ball on paddle
-            ball.y = paddle.y - ball.size;  // Just above paddle
-            ball.speedX = currentLevel.ballSpeed * (Math.random() > 0.5 ? 1 : -1);
-            ball.speedY = -currentLevel.ballSpeed;
-
-            // Pause the game to give player time to start
-            gameState.paused = true;
-            pauseButton.textContent = 'Start';
-
-            // Recreate blocks for the new level
-            createBlocks();
-
-            // Clear any existing power-ups
-            powerUps = [];
-
-            // Close settings menu
-            settingsMenu.style.display = 'none';
-
-            // Reset level select dropdown
-            levelSelect.value = '';
-
-            console.log('Successfully skipped to level:', gameState.level);
-            console.groupEnd();
         }
 
         // Ensure level select has an event listener
@@ -1297,18 +1459,191 @@
         };
         document.getElementById('gameContainer').appendChild(muteButton);
 
-        // Start game
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        createBlocks();
-        gameLoop();
+        // Comprehensive Error Logging
+        window.addEventListener('error', function(event) {
+            console.error('Unhandled Error:', {
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+                error: event.error
+            });
+            alert('An unexpected error occurred. Please check the console.');
+        });
 
-        levelSelect.addEventListener('change', function() {
-            const selectedLevel = this.value;
-            if (selectedLevel) {
-                skipToLevel(selectedLevel);
+        // Safe Initialization Function
+        function safeInitialize() {
+            try {
+                // Check critical DOM elements
+                const requiredElements = [
+                    'gameCanvas', 'score', 'lives', 'level', 
+                    'pauseButton', 'settingsButton', 'levelSelect'
+                ];
+                
+                requiredElements.forEach(elementId => {
+                    const element = document.getElementById(elementId);
+                    if (!element) {
+                        throw new Error(`Missing required element: ${elementId}`);
+                    }
+                });
+
+                // Initialize canvas
+                const canvas = document.getElementById('gameCanvas');
+                if (!canvas) {
+                    throw new Error('Canvas element not found');
+                }
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    throw new Error('Unable to get canvas context');
+                }
+
+                // Verify critical game objects
+                if (typeof LEVELS === 'undefined' || LEVELS.length === 0) {
+                    throw new Error('Game levels not defined');
+                }
+
+                // Detailed logging of initial state
+                console.group('Game Initialization');
+                console.log('Canvas size:', canvas.width, 'x', canvas.height);
+                console.log('Number of levels:', LEVELS.length);
+                console.log('Initial game state:', JSON.stringify(gameState, null, 2));
+                console.groupEnd();
+
+                // Ensure game loop starts
+                requestAnimationFrame(gameLoop);
+
+            } catch (error) {
+                console.error('Initialization Error:', error);
+                alert('Game initialization failed: ' + error.message);
+            }
+        }
+
+        // Ensure DOM is fully loaded before initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded. Starting game initialization.');
+            safeInitialize();
+        });
+
+        // Fallback initialization
+        if (document.readyState === 'complete') {
+            safeInitialize();
+        }
+
+        // Global error handling for mobile
+        window.addEventListener('error', function(event) {
+            console.error('Unhandled Error:', {
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+                error: event.error
+            });
+            
+            // Mobile-friendly error display
+            const errorOverlay = document.createElement('div');
+            errorOverlay.style.position = 'fixed';
+            errorOverlay.style.top = '0';
+            errorOverlay.style.left = '0';
+            errorOverlay.style.width = '100%';
+            errorOverlay.style.height = '100%';
+            errorOverlay.style.backgroundColor = 'rgba(0,0,0,0.8)';
+            errorOverlay.style.color = 'white';
+            errorOverlay.style.display = 'flex';
+            errorOverlay.style.justifyContent = 'center';
+            errorOverlay.style.alignItems = 'center';
+            errorOverlay.style.zIndex = '1000';
+            errorOverlay.style.padding = '20px';
+            errorOverlay.style.textAlign = 'center';
+            errorOverlay.innerHTML = `
+                <div>
+                    <h1>Game Error</h1>
+                    <p>${event.message}</p>
+                    <button onclick="location.reload()">Reload Game</button>
+                </div>
+            `;
+            document.body.appendChild(errorOverlay);
+        });
+
+        // Comprehensive Mobile Initialization
+        function initializeMobileGame() {
+            console.group('Mobile Game Initialization');
+            
+            try {
+                // Disable default touch behaviors
+                document.body.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+                document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+                document.body.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
+
+                // Resize canvas to fit screen
+                function resizeCanvasToScreen() {
+                    const gameContainer = document.getElementById('gameContainer');
+                    const canvas = document.getElementById('gameCanvas');
+                    
+                    // Calculate optimal canvas size
+                    const containerWidth = window.innerWidth;
+                    const containerHeight = window.innerHeight;
+                    
+                    // Maintain 4:3 aspect ratio
+                    const aspectRatio = 4 / 3;
+                    let newWidth, newHeight;
+                    
+                    if (containerWidth / containerHeight > aspectRatio) {
+                        // Container is wider than needed
+                        newHeight = containerHeight;
+                        newWidth = newHeight * aspectRatio;
+                    } else {
+                        // Container is taller than needed
+                        newWidth = containerWidth;
+                        newHeight = newWidth / aspectRatio;
+                    }
+                    
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    
+                    console.log('Canvas resized:', newWidth, 'x', newHeight);
+                }
+
+                // Initial resize
+                resizeCanvasToScreen();
+
+                // Resize on orientation change
+                window.addEventListener('resize', resizeCanvasToScreen);
+                window.addEventListener('orientationchange', resizeCanvasToScreen);
+
+                // Ensure game loop starts
+                requestAnimationFrame(gameLoop);
+
+                console.log('Mobile game initialization complete');
+            } catch (error) {
+                console.error('Mobile initialization failed:', error);
+                alert('Failed to initialize mobile game. Please reload.');
+            }
+            
+            console.groupEnd();
+        }
+
+        // Ensure initialization happens after DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded. Starting mobile game initialization.');
+            
+            // Detect mobile device
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                initializeMobileGame();
+            } else {
+                // Standard desktop initialization
+                safeInitialize();
             }
         });
+
+        // Fallback initialization for mobile
+        if (document.readyState === 'complete') {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                initializeMobileGame();
+            }
+        }
     </script>
 </body>
 </html>
